@@ -56,6 +56,13 @@ android/local.properties
 .env.*
 !.env.example
 
+# Service account keys / credential files should never live in the repo (GCP, etc.)
+# accidentally dropped at the project root — no legitimate root-level JSON exists.
+/*.json
+*-service-account*.json
+*.pem
+*.p12
+
 # ---------- IDE ----------
 .idea/
 *.swp
