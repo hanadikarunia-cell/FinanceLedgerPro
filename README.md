@@ -176,7 +176,6 @@ the full list; the essentials:
 | `SUPABASE_URL`                   | Supabase project URL |
 | `SUPABASE_ANON_KEY`              | Supabase public anon key |
 | `SUPABASE_SERVICE_ROLE_KEY`      | Supabase secret service_role key (server-only) |
-| `SUPABASE_JWT_SECRET`            | Supabase JWT signing secret, used to validate access tokens |
 | `RESEND_API_KEY`                 | Resend API key for approval emails |
 | `GOOGLE_SHEET_ID`                | Target Google Sheet ID for transaction sync |
 

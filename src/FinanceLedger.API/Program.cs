@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
@@ -13,6 +12,7 @@ using FinanceLedger.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
@@ -92,12 +92,19 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ---- Authentication: Supabase Auth issues and signs every access token; the API
-// only validates it (HS256 legacy shared secret) and enriches role/branch claims
-// from the app_metadata Supabase embeds in the token (see SupabaseClaimsTransformation).
+// ---- Authentication: Supabase Auth issues and signs every access token using its
+// project-specific asymmetric (ES256) signing key — there is no shared secret to
+// configure. The API validates tokens against Supabase's public JWKS endpoint and
+// enriches role/branch claims from the app_metadata Supabase embeds in the token
+// (see SupabaseClaimsTransformation).
 var supabaseSection = configuration.GetSection("Supabase");
 var supabaseUrl = supabaseSection["Url"]?.TrimEnd('/') ?? string.Empty;
-var supabaseJwtSecret = supabaseSection["JwtSecret"];
+var jwksUrl = $"{supabaseUrl}/auth/v1/.well-known/jwks.json";
+
+var jwksConfigManager = new ConfigurationManager<JsonWebKeySet>(
+    jwksUrl,
+    new JwksConfigurationRetriever(),
+    new HttpDocumentRetriever { RequireHttps = !builder.Environment.IsDevelopment() });
 
 builder.Services
     .AddAuthentication(options =>
@@ -118,10 +125,12 @@ builder.Services
             ValidIssuer = $"{supabaseUrl}/auth/v1",
             ValidAudience = "authenticated",
             ClockSkew = TimeSpan.FromMinutes(1),
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(string.IsNullOrWhiteSpace(supabaseJwtSecret)
-                    ? "development-only-insecure-signing-key-change-me-please-32b"
-                    : supabaseJwtSecret))
+            IssuerSigningKeyResolver = (_, _, kid, _) =>
+            {
+                var keys = jwksConfigManager.GetConfigurationAsync(CancellationToken.None)
+                    .GetAwaiter().GetResult().Keys;
+                return (kid is null ? keys : keys.Where(k => k.KeyId == kid)).Cast<SecurityKey>();
+            }
         };
     });
 

@@ -9,7 +9,9 @@ Render + Vercel, all on free tiers. For *why* the stack looks like this, see
 1. Go to [supabase.com](https://supabase.com) → New project. Pick any region close to
    you; note the database password you set (needed for the connection string).
 2. **Settings → API**: copy the **Project URL**, **anon public** key, and
-   **service_role** key. Settings → API → JWT Settings: copy the **JWT Secret**.
+   **service_role** key. No JWT secret is needed — Supabase signs access tokens with
+   a project-specific asymmetric (ES256) key, and the API validates them against the
+   public JWKS endpoint (`{SUPABASE_URL}/auth/v1/.well-known/jwks.json`) automatically.
 3. **Settings → Database → Connection string**: copy the **Session pooler** URI (the
    Transaction pooler also works, but Session pooler is the safest default for a
    long-lived EF Core connection pool). It looks like:
@@ -109,7 +111,7 @@ Set `EXPO_PUBLIC_API_BASE_URL` to the Render API URL before building
 | Symptom | Likely cause |
 |---|---|
 | `/health/ready` returns 503 | Wrong `POSTGRES_CONNECTION_STRING`, or the Supabase project is paused (free-tier projects pause after a week of inactivity — open the dashboard to wake it) |
-| Login fails with a generic error | `SUPABASE_JWT_SECRET`/`SUPABASE_ANON_KEY` mismatch between Render env vars and the Supabase dashboard values |
+| Login fails with a generic error | `SUPABASE_URL`/`SUPABASE_ANON_KEY` mismatch between Render env vars and the Supabase dashboard values, or the API can't reach the JWKS endpoint |
 | File upload fails | `attachments` bucket doesn't exist yet, or `SUPABASE_SERVICE_ROLE_KEY` is wrong |
 | Worker never syncs | `GOOGLE_SHEETS_CREDENTIALS_JSON` malformed, or the service account isn't shared as an editor on the target Sheet |
 | CORS errors in the browser console | `Cors__Origins__0` on the Render API doesn't match the Vercel URL exactly (scheme + host, no trailing slash) |

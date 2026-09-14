@@ -72,3 +72,7 @@ Thumbs.db
 
 # ---------- Local tooling ----------
 .claude/
+
+# ---------- Supabase CLI ----------
+supabase/.temp/
+supabase/.branches/

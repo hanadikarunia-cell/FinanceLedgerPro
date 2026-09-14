@@ -464,9 +464,12 @@ branch and on their own transactions; Managers operate across branches.
   against Supabase's GoTrue REST API (`POST /auth/v1/token?grant_type=password`); the
   API's `/auth/*` endpoints proxy this so the client-facing contract is unchanged from
   the Entra days.
-- **Access tokens:** JWTs issued and signed by Supabase (HS256, legacy shared secret),
-  validated by the API against `SUPABASE_JWT_SECRET` (issuer, audience, signature,
-  expiry).
+- **Access tokens:** JWTs issued and signed by Supabase using a project-specific
+  asymmetric (ES256) key — there is no shared secret to configure. The API validates
+  every token's signature against Supabase's public JWKS endpoint
+  (`{SUPABASE_URL}/auth/v1/.well-known/jwks.json`, fetched and cached by
+  `JwksConfigurationRetriever`/`ConfigurationManager<JsonWebKeySet>` in
+  `Program.cs`), plus issuer, audience, and expiry.
 - **Refresh tokens:** Issued and rotated by Supabase Auth on each
   `grant_type=refresh_token` call — the API no longer maintains its own refresh-token
   store. Stored **httpOnly + Secure + SameSite** cookies for the web client; secure
@@ -519,7 +522,7 @@ branch and on their own transactions; Managers operate across branches.
 | OWASP Risk | Mitigation in Finance Ledger Pro |
 |------------|----------------------------------|
 | A01 Broken Access Control | RBAC + policy-based ownership checks; deny-by-default; re-checked in use-cases |
-| A02 Cryptographic Failures | TLS 1.2+, HSTS; secrets in Render/Vercel env vars; tokens signed (HS256); Storage bucket private, server-only access |
+| A02 Cryptographic Failures | TLS 1.2+, HSTS; secrets in Render/Vercel env vars; tokens signed with an asymmetric key (ES256), verified against Supabase's public JWKS; Storage bucket private, server-only access |
 | A03 Injection | Parameterized EF Core/Npgsql queries; no string-concatenated SQL; input validation |
 | A04 Insecure Design | Clean Architecture, threat-modeled approval flow, least-privilege service_role key usage |
 | A05 Security Misconfiguration | SQL migrations checked into source, no debug in prod, minimal error detail, security headers middleware |
@@ -538,7 +541,7 @@ branch and on their own transactions; Managers operate across branches.
   before — real values are injected as environment variables at deploy time, never
   committed.
 - Secrets: `POSTGRES_CONNECTION_STRING`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
-  `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_JWT_SECRET`, `RESEND_API_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`,
   `GOOGLE_SHEET_ID`, `GOOGLE_SHEETS_CREDENTIALS_JSON`. See
   [.env.example](../.env.example) for the full list.
 - Rotation: update the value in the Render/Vercel dashboard and redeploy (or trigger a
