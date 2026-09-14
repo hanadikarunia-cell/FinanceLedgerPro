@@ -116,6 +116,12 @@ builder.Services
     {
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.SaveToken = true;
+        // Without this, the JWT handler's default inbound claim map renames
+        // Supabase's own top-level "role" claim (always "authenticated") to
+        // ClaimTypes.Role before SupabaseClaimsTransformation runs — which then
+        // looks like our RBAC role claim already exists and skips adding the real
+        // one from app_metadata. Keeping claim names as-is avoids that collision.
+        options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
