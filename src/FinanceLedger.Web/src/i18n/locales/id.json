@@ -77,7 +77,8 @@
     "settings": "Pengaturan",
     "appName": "Finance Ledger Pro",
     "brandShort": "Ledger Pro",
-    "version": "Finance Ledger Pro v1.0"
+    "version": "Finance Ledger Pro v{{version}}",
+    "feedback": "Masukan"
   },
   "layout": {
     "account": "Akun",
@@ -337,5 +338,23 @@
     "totalIssued": "Kas Kecil Dikeluarkan",
     "totalExpenses": "Pengeluaran Kas Kecil",
     "outstanding": "Sisa Kas Kecil"
+  },
+  "feedback": {
+    "title": "Masukan",
+    "newFeedback": "Kirim Masukan",
+    "pasteHint": "Jelaskan masalah atau saran Anda, dan tempel tangkapan layar (Ctrl+V) langsung ke kotak di bawah jika membantu.",
+    "messagePlaceholder": "Apa yang terjadi, atau apa yang ingin Anda lihat?",
+    "submit": "Kirim Masukan",
+    "uploading": "Mengunggah gambar…",
+    "uploadFailed": "Gagal mengunggah gambar",
+    "failedToLoad": "Gagal memuat masukan",
+    "submittedBy": "Dikirim Oleh",
+    "message": "Pesan",
+    "image": "Gambar",
+    "version": "Versi",
+    "severity": "Tingkat",
+    "untriaged": "Belum ditinjau",
+    "minor": "Minor",
+    "major": "Major"
   }
 }

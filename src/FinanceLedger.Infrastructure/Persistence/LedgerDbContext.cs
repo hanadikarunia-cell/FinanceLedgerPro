@@ -20,6 +20,7 @@ public class LedgerDbContext : DbContext
     public DbSet<PettyCashRequest> PettyCashRequests => Set<PettyCashRequest>();
     public DbSet<Car> Cars => Set<Car>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Feedback> FeedbackItems => Set<Feedback>();
 
     // Application-layer code (e.g. DashboardService's report date ranges) sometimes
     // builds DateTimes via `new DateTime(y, m, d)`, which defaults to Kind=Unspecified.
@@ -210,6 +211,21 @@ public class LedgerDbContext : DbContext
             builder.Property(i => i.CreatedBy).HasColumnName("created_by");
             builder.Property(i => i.CreatedByName).HasColumnName("created_by_name");
             builder.Property(i => i.CreatedDate).HasColumnName("created_date");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
+        modelBuilder.Entity<Feedback>(builder =>
+        {
+            builder.ToTable("feedback");
+            builder.HasKey(f => f.Id);
+            builder.Property(f => f.Id).HasColumnName("id");
+            builder.Property(f => f.Message).HasColumnName("message");
+            builder.Property(f => f.ImageUrl).HasColumnName("image_url");
+            builder.Property(f => f.Severity).HasColumnName("severity").HasConversion<string>();
+            builder.Property(f => f.SubmittedBy).HasColumnName("submitted_by");
+            builder.Property(f => f.SubmittedByName).HasColumnName("submitted_by_name");
+            builder.Property(f => f.SubmittedDate).HasColumnName("submitted_date");
+            builder.Property(f => f.AppVersion).HasColumnName("app_version");
             ConfigureXminConcurrencyToken(builder);
         });
     }

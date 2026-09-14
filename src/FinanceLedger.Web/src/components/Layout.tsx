@@ -36,11 +36,13 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import PaymentsIcon from '@mui/icons-material/Payments';
+import FeedbackIcon from '@mui/icons-material/Feedback';
 
 import { useAuth } from '@/context/AuthContext';
 import { useColorMode } from '@/context/ThemeContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import type { UserRole } from '@/types';
+import { APP_VERSION } from '@/utils/version';
 
 const DRAWER_WIDTH = 248;
 
@@ -63,6 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.branches', to: '/branches', icon: <StoreIcon />, roles: ['Manager'] },
   { labelKey: 'nav.auditLogs', to: '/audit-logs', icon: <HistoryIcon />, roles: ['Manager'] },
   { labelKey: 'nav.settings', to: '/settings', icon: <SettingsIcon /> },
+  { labelKey: 'nav.feedback', to: '/feedback', icon: <FeedbackIcon /> },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -121,7 +124,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <Divider />
       <Box sx={{ p: 2 }}>
         <Typography variant="caption" color="text.secondary">
-          {t('nav.version')}
+          {t('nav.version', { version: APP_VERSION })}
         </Typography>
       </Box>
     </Box>

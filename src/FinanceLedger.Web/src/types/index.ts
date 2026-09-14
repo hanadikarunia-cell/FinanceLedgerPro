@@ -329,3 +329,22 @@ export interface AuditLogFilters {
   page?: number;
   pageSize?: number;
 }
+
+export type FeedbackSeverity = 'Minor' | 'Major';
+
+export interface Feedback {
+  id: string;
+  message: string;
+  imageUrl?: string;
+  severity?: FeedbackSeverity;
+  submittedBy: string;
+  submittedByName: string;
+  submittedDate: string;
+  appVersion: string;
+}
+
+export interface FeedbackInput {
+  message: string;
+  imageUrl?: string;
+  appVersion: string;
+}

@@ -77,7 +77,8 @@
     "settings": "Settings",
     "appName": "Finance Ledger Pro",
     "brandShort": "Ledger Pro",
-    "version": "Finance Ledger Pro v1.0"
+    "version": "Finance Ledger Pro v{{version}}",
+    "feedback": "Feedback"
   },
   "layout": {
     "account": "Account",
@@ -339,5 +340,23 @@
     "outstanding": "Petty Cash Outstanding",
     "currentBalance": "Your petty cash balance: {{amount}}",
     "balanceLabel": "Petty Cash Balance"
+  },
+  "feedback": {
+    "title": "Feedback",
+    "newFeedback": "Send Feedback",
+    "pasteHint": "Describe the issue or suggestion, and paste a screenshot (Ctrl+V) directly into the box below if it helps.",
+    "messagePlaceholder": "What happened, or what would you like to see?",
+    "submit": "Submit Feedback",
+    "uploading": "Uploading image…",
+    "uploadFailed": "Image upload failed",
+    "failedToLoad": "Failed to load feedback",
+    "submittedBy": "Submitted By",
+    "message": "Message",
+    "image": "Image",
+    "version": "Version",
+    "severity": "Severity",
+    "untriaged": "Not triaged",
+    "minor": "Minor",
+    "major": "Major"
   }
 }

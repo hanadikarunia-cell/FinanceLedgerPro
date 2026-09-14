@@ -1,5 +1,6 @@
 using FinanceLedger.Application.Common;
 using FinanceLedger.Application.DTOs;
+using FinanceLedger.Domain.Enums;
 
 namespace FinanceLedger.Application.Interfaces;
 
@@ -77,4 +78,11 @@ public interface IInvoiceService
 public interface ISyncService
 {
     Task<int> SyncApprovedTransactionsAsync(CancellationToken ct = default);
+}
+
+public interface IFeedbackService
+{
+    Task<PagedResult<FeedbackDto>> QueryAsync(FeedbackQuery query, CancellationToken ct = default);
+    Task<FeedbackDto> CreateAsync(CreateFeedbackDto dto, CancellationToken ct = default);
+    Task<FeedbackDto> SetSeverityAsync(string id, FeedbackSeverity severity, CancellationToken ct = default);
 }

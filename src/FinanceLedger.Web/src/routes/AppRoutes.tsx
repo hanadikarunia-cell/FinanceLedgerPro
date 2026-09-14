@@ -16,6 +16,7 @@ import Invoices from '@/pages/Invoices';
 import AccountsPayable from '@/pages/AccountsPayable';
 import AuditLogs from '@/pages/AuditLogs';
 import Settings from '@/pages/Settings';
+import FeedbackPage from '@/pages/Feedback';
 import NotFound from '@/pages/NotFound';
 
 export default function AppRoutes() {
@@ -69,6 +70,14 @@ export default function AppRoutes() {
           element={
             <Layout>
               <Settings />
+            </Layout>
+          }
+        />
+        <Route
+          path="/feedback"
+          element={
+            <Layout>
+              <FeedbackPage />
             </Layout>
           }
         />

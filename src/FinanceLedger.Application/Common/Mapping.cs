@@ -106,6 +106,18 @@ public static class Mapping
         CreatedDate = i.CreatedDate
     };
 
+    public static FeedbackDto ToDto(this Feedback f) => new()
+    {
+        Id = f.Id,
+        Message = f.Message,
+        ImageUrl = f.ImageUrl,
+        Severity = f.Severity,
+        SubmittedBy = f.SubmittedBy,
+        SubmittedByName = f.SubmittedByName,
+        SubmittedDate = f.SubmittedDate,
+        AppVersion = f.AppVersion
+    };
+
     public static AuditLogDto ToDto(this AuditLog a) => new()
     {
         Id = a.Id,
