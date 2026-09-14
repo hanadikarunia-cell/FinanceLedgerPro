@@ -45,33 +45,41 @@ Verify: **Table Editor** should show `branches`, `users`, `transactions`,
 public access — the API is the only thing that ever talks to it, using the
 service_role key, and relays downloads through `GET /api/v1/files/{id}`).
 
-## 4. Create the Render services
+## 4. Create the Render service
 
-Render has no native .NET buildpack, so both services build from the Dockerfiles at
-`src/FinanceLedger.API/Dockerfile` and `src/FinanceLedger.Worker/Dockerfile`
-(multi-stage: `dotnet publish` in an SDK image, then a slim ASP.NET/runtime image).
-The repo root `render.yaml` is a Render **Blueprint** that declares both services so
-you don't have to configure build/start commands by hand.
+Render has no native .NET buildpack, so the API builds from the Dockerfile at
+`src/FinanceLedger.API/Dockerfile` (multi-stage: `dotnet publish` in an SDK image,
+then a slim ASP.NET runtime image). The repo root `render.yaml` is a Render
+**Blueprint** that declares this service so you don't have to configure build/start
+commands by hand.
+
+> **Why only one service:** Render's free tier has no Background Worker instance
+> type — that requires a paid plan ($7/mo+) regardless of how many other free
+> services you have. Instead of paying for an always-on process just to run the
+> Google Sheets sync, that logic lives behind a Manager-only admin endpoint on this
+> same free API (`POST /api/v1/admin/sync/google-sheets`), triggered on a schedule by
+> a free GitHub Actions workflow — see step 6.
 
 1. Sign in to [render.com](https://render.com) with GitHub and grant access to this repo.
 2. **New → Blueprint** → select this repo. Render reads `render.yaml` and proposes
-   two services: `financeledgerpro-api` (Web Service) and `financeledgerpro-worker`
-   (Background Worker), both on the free plan.
+   one service: `financeledgerpro-api` (Web Service, free plan).
 3. Render will prompt for every environment variable marked `sync: false` in
-   `render.yaml` — fill these in from [.env.example](../.env.example) /
-   step 1-3 above (`ConnectionStrings__Postgres`, `Supabase__Url`,
-   `Supabase__AnonKey`, `Supabase__ServiceRoleKey`, `Resend__ApiKey`,
-   `Resend__SenderAddress`, `Cors__Origins__0` for the API;
-   `GoogleSheets__SpreadsheetId`/`GoogleSheets__CredentialsJson` for the worker —
-   paste the service account JSON as a single-line value).
-4. Apply the blueprint. Both services build and deploy.
+   `render.yaml` — fill these in from [.env.example](../.env.example) / step 1-3
+   above: `ConnectionStrings__Postgres`, `Supabase__Url`, `Supabase__AnonKey`,
+   `Supabase__ServiceRoleKey`, `Resend__ApiKey`, `Resend__SenderAddress`,
+   `Cors__Origins__0`, `GoogleSheets__SpreadsheetId`, `GoogleSheets__CredentialsJson`
+   (paste the service account JSON directly — Render's value field accepts
+   multi-line text, no need to collapse it to one line). Leave `Resend__*` and the
+   `GoogleSheets__*` values blank if you don't need email or the Sheets sync yet —
+   nothing else depends on either.
+4. Apply the blueprint. The service builds and deploys.
 5. Confirm `https://<api-service>.onrender.com/health` returns 200, and
    `https://<api-service>.onrender.com/health/ready` returns 200 once Postgres/Storage
-   are reachable. Check the worker's logs for "Google Sheets sync worker started."
+   are reachable.
 
-Both services auto-redeploy on every push to the repo's default branch. If you'd
-rather configure services by hand instead of via the Blueprint, use runtime **Docker**
-with the same two Dockerfiles as the Docker build context set to the repo root.
+The service auto-redeploys on every push to the repo's default branch. If you'd
+rather configure it by hand instead of via the Blueprint, use runtime **Docker** with
+the same Dockerfile and the Docker build context set to the repo root.
 
 ## 5. Create the Vercel project
 
@@ -83,23 +91,40 @@ with the same two Dockerfiles as the Docker build context set to the repo root.
 
 ## 6. Wire CORS back to the deployed frontend
 
-Once the Vercel URL is known, set `Cors__Origins__0` (or `FRONTEND_ORIGIN`, per
-however you templated `appsettings.Production.json`) on the Render API service to the
+Once the Vercel URL is known, set `Cors__Origins__0` on the Render API service to the
 Vercel URL, and redeploy the API so the browser can call it.
 
-## 7. Verify end-to-end
+## 7. Schedule the Google Sheets sync (optional, skip if not using Sheets)
+
+Since there's no separate worker process, a scheduled GitHub Actions workflow
+(`.github/workflows/sync-google-sheets.yml`, already in this repo, runs every 15
+minutes for free) logs in as a Manager and calls the sync endpoint.
+
+1. In the app, create a dedicated **Manager** user for this purpose (Users →
+   Create) rather than reusing the seeded default admin — e.g.
+   `sync-bot@yourdomain.com` with a strong generated password. This keeps the
+   automation credential separate from your real login and easy to revoke later.
+2. In the GitHub repo → **Settings → Secrets and variables → Actions**, add:
+   - `SYNC_API_BASE_URL` = `https://<api-service>.onrender.com`
+   - `SYNC_USER_EMAIL` = that dedicated user's email
+   - `SYNC_USER_PASSWORD` = that dedicated user's password
+3. The workflow now runs automatically every 15 minutes. Trigger it once manually
+   (Actions tab → "Sync approved transactions to Google Sheets" → Run workflow) to
+   confirm it succeeds.
+
+## 8. Verify end-to-end
 
 1. Log in at the Vercel URL with the seeded manager account
    (`admin@financeledger.local` / `Admin@123` — **change this password immediately**
    via Settings, since the seed step provisions it in Supabase Auth on first API
    startup).
 2. Create a transaction, upload an attachment, confirm it downloads.
-3. Approve the transaction; confirm the Worker's next sync cycle (or trigger it
-   manually if you've wired the admin endpoint) writes it to the configured Google
-   Sheet.
-4. Trigger a password reset and an approval email; confirm it arrives via Resend.
+3. Approve the transaction; run the sync workflow (or wait for its next scheduled
+   run) and confirm the row appears in the configured Google Sheet.
+4. Trigger a password reset and an approval email; confirm it arrives via Resend
+   (if configured).
 
-## 8. Mobile (optional)
+## 9. Mobile (optional)
 
 Set `EXPO_PUBLIC_API_BASE_URL` to the Render API URL before building
 (`src/FinanceLedger.Mobile/.env` or `app.json` → `expo.extra.apiBaseUrl`).
@@ -111,5 +136,6 @@ Set `EXPO_PUBLIC_API_BASE_URL` to the Render API URL before building
 | `/health/ready` returns 503 | Wrong `POSTGRES_CONNECTION_STRING`, or the Supabase project is paused (free-tier projects pause after a week of inactivity — open the dashboard to wake it) |
 | Login fails with a generic error | `SUPABASE_URL`/`SUPABASE_ANON_KEY` mismatch between Render env vars and the Supabase dashboard values, or the API can't reach the JWKS endpoint |
 | File upload fails | `attachments` bucket doesn't exist yet, or `SUPABASE_SERVICE_ROLE_KEY` is wrong |
-| Worker never syncs | `GOOGLE_SHEETS_CREDENTIALS_JSON` malformed, or the service account isn't shared as an editor on the target Sheet |
+| Sync workflow fails at login | `SYNC_USER_EMAIL`/`SYNC_USER_PASSWORD` GitHub secrets wrong, or that user isn't `Manager` role |
+| Sync workflow fails at the sync step | `GoogleSheets__CredentialsJson` malformed on Render, or the service account isn't shared as an Editor on the target Sheet |
 | CORS errors in the browser console | `Cors__Origins__0` on the Render API doesn't match the Vercel URL exactly (scheme + host, no trailing slash) |

@@ -14,19 +14,21 @@
 | Component | Where | Notes |
 |-----------|-------|-------|
 | `FinanceLedger.API` | Render Web Service | ASP.NET Core 8, `*.onrender.com` domain, auto-deployed on push to the default branch |
-| `FinanceLedger.Worker` | Render Background Worker | Same repo/image, different entrypoint/start command; polls approved transactions and syncs to Google Sheets |
+| Google Sheets sync | GitHub Actions (scheduled) → API admin endpoint | Render's free tier has no Background Worker instance type, so this runs as a `POST /api/v1/admin/sync/google-sheets` call on a 15-min cron instead of a dedicated always-on process — see §4 |
+| `FinanceLedger.Worker` | Not deployed | Kept in the repo for local use or a future paid always-on deployment; its sync logic (`ISyncService`) is shared with the API endpoint above so it exists in one place |
 | `FinanceLedger.Web` | Vercel | Vite static build, framework auto-detected |
 | `FinanceLedger.Mobile` | Not deployed by this pipeline | Built locally / via `infra/github-actions/mobile.yml`; only needs `EXPO_PUBLIC_API_BASE_URL` pointed at the Render API |
 | Postgres | Supabase project | Schema applied from `supabase/migrations/*.sql` |
 | File storage | Supabase Storage | Private `attachments` bucket, accessed server-side only via the service_role key |
-| Auth | Supabase Auth | Email/password; JWTs validated by the API using the project's JWT secret |
+| Auth | Supabase Auth | Email/password; JWTs validated by the API against Supabase's public JWKS endpoint |
 | Email | Resend | Free-tier transactional email for approval notifications |
 
 Everything above fits comfortably within each platform's free tier for a
 single-team/personal deployment. There is no separate CI/CD pipeline to deploy the
 API or web app — Render and Vercel both watch the GitHub repo directly and redeploy
-on every push (configurable per-branch). GitHub Actions (`.github/workflows/`) is
-still used for CI checks (CodeQL, mobile build) but is not part of the deploy path.
+on every push (configurable per-branch). GitHub Actions (`.github/workflows/`) runs
+CI checks (CodeQL, mobile build) and the scheduled Sheets-sync trigger; it is not
+otherwise part of the API/web deploy path.
 
 ## 2. Why this replaced the previous Azure/Entra/Cosmos stack
 
@@ -71,31 +73,32 @@ whenever a Manager creates or updates a user. Supabase embeds `app_metadata` int
 every access token it issues, so the API can read `role`/`branches` straight off the
 JWT without an extra database round-trip or a custom Postgres Auth Hook.
 
-## 4. Render (API + Worker)
+## 4. Render (API)
 
-Two services, same repo, both defined in the root `render.yaml` Blueprint. Render has
-no native .NET buildpack, so both build from a Dockerfile:
+One service, defined in the root `render.yaml` Blueprint. Render has no native .NET
+buildpack, so it builds from `src/FinanceLedger.API/Dockerfile` (multi-stage:
+`dotnet publish` in the SDK image, `mcr.microsoft.com/dotnet/aspnet:8.0` at runtime).
+The container entrypoint expands Render's injected `PORT` into `ASPNETCORE_URLS` at
+startup. Health check path: `/health`. The Dockerfile expects the **repo root** as
+the Docker build context (`dockerContext: .` in `render.yaml`), since the API
+project references the sibling Domain/Application/Infrastructure projects by
+relative path.
 
-- **API** — Web Service, built from `src/FinanceLedger.API/Dockerfile` (multi-stage:
-  `dotnet publish` in the SDK image, `mcr.microsoft.com/dotnet/aspnet:8.0` at runtime).
-  The container entrypoint expands Render's injected `PORT` into
-  `ASPNETCORE_URLS` at startup. Health check path: `/health`.
-- **Worker** — Background Worker, built from `src/FinanceLedger.Worker/Dockerfile`
-  (same pattern, `mcr.microsoft.com/dotnet/runtime:8.0` at runtime — no ASP.NET
-  needed). No public port; it runs the Google Sheets sync loop on the interval
-  configured via `Sync__IntervalMinutes`.
-
-Both Dockerfiles expect the **repo root** as the Docker build context (`dockerContext:
-.` in `render.yaml`), since the API/Worker projects reference the sibling
-Domain/Application/Infrastructure projects by relative path.
-
-Both read the same `POSTGRES_CONNECTION_STRING`/`SUPABASE_*`/`RESEND_*` environment
-variables (see [.env.example](../.env.example)); the Worker additionally needs
-`GOOGLE_SHEET_ID` and `GOOGLE_SHEETS_CREDENTIALS_JSON`.
+Reads `ConnectionStrings__Postgres`/`Supabase__*`/`Resend__*`/`GoogleSheets__*`
+environment variables (see [.env.example](../.env.example)).
 
 Render's free tier spins the API down after inactivity and cold-starts on the next
 request (expect a ~30-60s first request after idle) — acceptable for a personal
-project; there is no free "always-on" tier.
+project; there is no free "always-on" tier. The scheduled Sheets-sync workflow
+described below also happens to ping the API every 15 minutes, which keeps it from
+spinning down as long as that workflow is enabled.
+
+**There is no separate Worker service.** `src/FinanceLedger.Worker/Dockerfile`
+still exists for local use or a future paid Render Background Worker, but the
+free-tier deploy runs the same sync logic (`ISyncService`, shared by both) behind
+`POST /api/v1/admin/sync/google-sheets` on the API, called by
+`.github/workflows/sync-google-sheets.yml` on a cron schedule — see
+[free-tier-deployment.md](free-tier-deployment.md) §7 for the exact secrets/setup.
 
 ## 5. Vercel (Web frontend)
 

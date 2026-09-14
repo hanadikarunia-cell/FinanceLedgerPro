@@ -66,3 +66,14 @@ public interface IInvoiceService
     Task<InvoiceDto> VoidAsync(string id, CancellationToken ct = default);
     Task DeleteAsync(string id, CancellationToken ct = default);
 }
+
+/// <summary>
+/// One sync cycle for the Google Sheets integration: push approved transactions to
+/// the configured sheet. Shared by the API's admin-triggered endpoint (the free-tier
+/// path, called on a schedule by GitHub Actions) and the standalone Worker host
+/// (for local use or a paid always-on deployment), so the logic exists exactly once.
+/// </summary>
+public interface ISyncService
+{
+    Task<int> SyncApprovedTransactionsAsync(CancellationToken ct = default);
+}

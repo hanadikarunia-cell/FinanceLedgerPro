@@ -26,7 +26,7 @@ The platform is built on **free-tier PaaS** (Render + Supabase + Vercel) and fol
 | Exports | Excel (ClosedXML), PDF (QuestPDF), CSV |
 | Attachments | Receipts/documents stored in Supabase Storage |
 | Notifications | Approval emails via Resend |
-| External sync | One-way sync to Google Sheets via a background Worker |
+| External sync | One-way sync to Google Sheets, triggered on a schedule (no dedicated worker — see §11) |
 | Observability | `/health` + `/health/ready` endpoints |
 | Secrets | Render/Vercel environment variables (no secrets in config or code) |
 
@@ -39,7 +39,7 @@ The platform is built on **free-tier PaaS** (Render + Supabase + Vercel) and fol
 | API | ASP.NET Core 8 Web API |
 | Datastore | Supabase Postgres |
 | File storage | Supabase Storage |
-| Compute | Render (API Web Service + Worker Background Worker), Vercel (web) |
+| Compute | Render (single API Web Service — no Background Worker on the free tier), Vercel (web) |
 | Identity | Supabase Auth + JWT + refresh tokens |
 | Email | Resend |
 | Secrets | Render/Vercel environment variables |
@@ -76,8 +76,8 @@ The solution enforces the **Dependency Rule**: source-code dependencies point on
 | `FinanceLedgerPro.Domain` | Entities, enums, value objects, domain events, invariants. No external dependencies. |
 | `FinanceLedgerPro.Application` | Use-cases (CQRS handlers), DTOs, validators (FluentValidation), repository/service **interfaces**. |
 | `FinanceLedgerPro.Infrastructure` | Postgres (Npgsql/EF Core) repositories, Supabase Storage client, Supabase Auth client, Resend email service, Google Sheets client. Implements Application interfaces. |
-| `FinanceLedgerPro.Api` | Controllers, middleware, DI wiring, auth, versioning, Swagger. |
-| `FinanceLedgerPro.Worker` | Background service for Google Sheets sync. |
+| `FinanceLedgerPro.Api` | Controllers, middleware, DI wiring, auth, versioning, Swagger. Also hosts the admin-triggered Google Sheets sync endpoint (§11). |
+| `FinanceLedgerPro.Worker` | Standalone host for the same sync logic (`ISyncService`), for local use or a future paid always-on deployment — not deployed on the free tier. |
 | `FinanceLedgerPro.Tests.*` | Unit / integration tests. |
 
 ### 2.2 Cross-Cutting Principles
@@ -110,10 +110,11 @@ flowchart TB
     subgraph Backend["Render Web Service — .NET 8 Web API"]
         API["REST API /api/v1<br/>Clean Architecture + Repository"]
         GEN["Excel / PDF / CSV<br/>Generator<br/>(ClosedXML + QuestPDF)"]
+        SYNC["ISyncService<br/>(admin-triggered)"]
     end
 
-    subgraph Worker["Render Background Worker"]
-        SYNC["Google Sheets<br/>Sync Service"]
+    subgraph CI["GitHub Actions"]
+        CRON["Scheduled workflow<br/>(every 15 min)"]
     end
 
     subgraph Data["Supabase Project"]
@@ -139,6 +140,7 @@ flowchart TB
     API --> GEN
     API --> RESEND
 
+    CRON -->|"POST /admin/sync/google-sheets<br/>(Manager JWT)"| API
     SYNC --> PG
     SYNC --> GS
 
@@ -449,6 +451,7 @@ branch and on their own transactions; Managers operate across branches.
 | Create / update / deactivate user | ✅ | ❌ |
 | Change a user's role | ✅ | ❌ |
 | View audit logs | ✅ | ❌ (own actions only) |
+| Trigger Google Sheets sync (`/admin/sync/google-sheets`) | ✅ | ❌ |
 
 > Enforcement occurs at **two layers**: ASP.NET Core `[Authorize(Roles=...)]` +
 > policy-based authorization handlers (for resource-ownership checks such as "own branch /
@@ -608,23 +611,39 @@ flowchart LR
 
 ---
 
-## 11. Google Sheets Sync Worker
+## 11. Google Sheets Sync
 
-A Render **Background Worker** (`FinanceLedger.Worker`) polls Postgres on a timer
-(`Sync:IntervalMinutes`, default 15) for transactions with `status = Approved`, and
-pushes them to a configured Google Sheet (`GOOGLE_SHEET_ID`) for finance teams that
-work in Sheets. A manual-trigger channel (`ManualSyncTrigger`) also exists for
-on-demand runs, e.g. from an admin endpoint.
+The sync logic (query `status = Approved` transactions, push them to a configured
+Google Sheet) lives once, in `ISyncService`/`SyncService`
+(`FinanceLedger.Application`), and is driven from two different hosts depending on
+deployment:
 
-- Uses a Google **service account** (JSON credential passed via
-  `GOOGLE_SHEETS_CREDENTIALS_JSON`).
+- **Free-tier deploy (current):** `AdminController.SyncGoogleSheets`
+  (`POST /api/v1/admin/sync/google-sheets`, `[Authorize(Policy = "ManagerOnly")]`) on
+  the API calls `ISyncService` once per request. A scheduled **GitHub Actions**
+  workflow (`.github/workflows/sync-google-sheets.yml`) logs in as a dedicated
+  automation Manager user and calls this endpoint every 15 minutes. This exists
+  because Render's free tier has no Background Worker instance type — a paid plan
+  ($7/mo+) would be needed to run `FinanceLedger.Worker` continuously, so the same
+  logic instead runs on-demand on the already-free API. As a side effect, the
+  scheduled call also prevents the free API from spinning down on inactivity.
+- **Standalone/paid deploy (optional):** `FinanceLedger.Worker`
+  (`GoogleSheetsSyncWorker`) polls on a timer (`Sync:IntervalMinutes`, default 15)
+  and calls the same `ISyncService`. A `ManualSyncTrigger` channel also exists for
+  on-demand runs. Kept in the repo for local development or if you later move to a
+  paid Render plan (or another host) and want a real always-on process instead.
+
+Either way:
+
+- Uses a Google **service account** (JSON credential in
+  `GoogleSheets__CredentialsJson`).
 - **Polling, not a change feed** — Cosmos's change feed has no Postgres equivalent in
   this design; querying `status = Approved` on the indexed `transactions` table is
   cheap enough at this scale. There is currently no "already synced" flag, and
   `GoogleSheetsService` appends rows (`Values.Append`) rather than upserting — so every
-  sync cycle re-appends every approved transaction to the sheet. This is pre-existing
+  sync run re-appends every approved transaction to the sheet. This is pre-existing
   behavior (unchanged by this migration, not something the Cosmos design solved
   either) worth fixing separately if the Sheet needs to stay duplicate-free.
 - One-way sync (Postgres → Sheets); Sheets is read-only downstream.
-- Failures are logged and the worker continues on the next tick (or the next manual
-  trigger) rather than crashing the process.
+- Failures are logged (surfaced as a failed GitHub Actions run, or logged and
+  retried next tick for the standalone worker) rather than crashing anything.

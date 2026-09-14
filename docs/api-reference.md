@@ -777,3 +777,22 @@ Versioning headers on responses:
 api-supported-versions: 1.0
 api-deprecated-versions:
 ```
+
+---
+
+## 12. Admin
+
+### 12.1 Trigger Google Sheets Sync
+
+`POST /api/v1/admin/sync/google-sheets` · **Auth:** Manager only
+
+Runs one Google Sheets sync cycle synchronously and returns how many transactions
+were pushed. Added for the free-tier deployment, where a scheduled GitHub Actions
+workflow calls this on an interval in place of a dedicated always-on worker process
+(see `docs/architecture.md` §11) — no request body.
+
+```json
+{
+  "transactionsSynced": 3
+}
+```

@@ -1,7 +1,12 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
 # In the Render dashboard: New → Blueprint → select this repo. Render reads this file
-# and proposes both services below; envVars marked `sync: false` prompt you for the
+# and proposes the service below; envVars marked `sync: false` prompt you for the
 # value during setup (secrets are never stored in this file/repo).
+#
+# There is only one service here. Render's free tier has no Background Worker
+# instance type (that requires a paid plan), so the Google Sheets sync runs as an
+# admin-triggered endpoint on this same API instead of a separate always-on worker —
+# see .github/workflows/sync-google-sheets.yml, which calls it on a schedule.
 services:
   - type: web
     name: financeledgerpro-api
@@ -34,34 +39,5 @@ services:
         sync: false
       - key: GoogleSheets__SheetName
         value: Transactions
-
-  - type: worker
-    name: financeledgerpro-worker
-    runtime: docker
-    plan: free
-    region: singapore
-    dockerfilePath: ./src/FinanceLedger.Worker/Dockerfile
-    dockerContext: .
-    envVars:
-      - key: DOTNET_ENVIRONMENT
-        value: Production
-      - key: ConnectionStrings__Postgres
-        sync: false
-      - key: Supabase__Url
-        sync: false
-      - key: Supabase__AnonKey
-        sync: false
-      - key: Supabase__ServiceRoleKey
-        sync: false
-      - key: Supabase__StorageBucket
-        value: attachments
-      - key: GoogleSheets__SpreadsheetId
-        sync: false
-      - key: GoogleSheets__SheetName
-        value: Transactions
       - key: GoogleSheets__CredentialsJson
         sync: false
-      - key: Sync__IntervalMinutes
-        value: "15"
-      - key: Sync__Enabled
-        value: "true"

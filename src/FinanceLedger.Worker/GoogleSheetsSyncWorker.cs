@@ -1,5 +1,4 @@
 using FinanceLedger.Application.Interfaces;
-using FinanceLedger.Domain.Entities;
 using FinanceLedger.Worker.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -113,18 +112,7 @@ public sealed class GoogleSheetsSyncWorker : BackgroundService
     private async Task<int> DoSyncAsync(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
-        var repository = scope.ServiceProvider.GetRequiredService<ITransactionRepository>();
-        var sheets = scope.ServiceProvider.GetRequiredService<IGoogleSheetsService>();
-
-        IReadOnlyList<Transaction> pending = await repository.GetApprovedNotSyncedAsync(ct).ConfigureAwait(false);
-        if (pending.Count == 0)
-        {
-            _logger.LogDebug("No approved transactions pending sync.");
-            return 0;
-        }
-
-        _logger.LogInformation("Syncing {Count} approved transaction(s) to Google Sheets.", pending.Count);
-        await sheets.SyncTransactionsAsync(pending, ct).ConfigureAwait(false);
-        return pending.Count;
+        var sync = scope.ServiceProvider.GetRequiredService<ISyncService>();
+        return await sync.SyncApprovedTransactionsAsync(ct).ConfigureAwait(false);
     }
 }
