@@ -28,7 +28,7 @@
       "expo-secure-store"
     ],
     "extra": {
-      "apiBaseUrl": "https://api.financeledgerpro.example.com"
+      "apiBaseUrl": "https://financeledgerpro-api.onrender.com"
     }
   }
 }
