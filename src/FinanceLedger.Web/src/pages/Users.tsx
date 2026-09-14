@@ -20,13 +20,15 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
+import LockResetIcon from '@mui/icons-material/LockReset';
 
 import type { GridColDef } from '@mui/x-data-grid';
 import DataTable from '@/components/DataTable';
 import { useBranches } from '@/hooks/useBranches';
-import { useCreateUser, useUpdateUser, useUsers } from '@/hooks/useUsers';
+import { useCreateUser, useResetUserPassword, useUpdateUser, useUsers } from '@/hooks/useUsers';
 import type { User, UserInput, UserRole } from '@/types';
 import { getErrorMessage } from '@/utils/format';
 
@@ -36,19 +38,42 @@ export default function Users() {
   const { data: branches = [] } = useBranches();
   const createMut = useCreateUser();
   const updateMut = useUpdateUser();
+  const resetPasswordMut = useResetUserPassword();
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  const [resetTarget, setResetTarget] = useState<User | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [resetPasswordDone, setResetPasswordDone] = useState(false);
 
+  // Password is required when creating a new user (there's no other way to sign in),
+  // but stays optional when editing (leave blank to keep the current password).
   const schema = useMemo(
     () =>
-      z.object({
-        email: z.string().min(1, t('users.emailRequired')).email(t('users.emailInvalid')),
-        displayName: z.string().min(1, t('users.nameRequired')),
-        role: z.enum(['Manager', 'User']),
-        assignedBranches: z.array(z.string()),
-        password: z.string().optional(),
-      }),
+      z
+        .object({
+          email: z.string().min(1, t('users.emailRequired')).email(t('users.emailInvalid')),
+          displayName: z.string().min(1, t('users.nameRequired')),
+          role: z.enum(['Manager', 'User']),
+          assignedBranches: z.array(z.string()),
+          password: z.string().optional(),
+          isEditing: z.boolean(),
+        })
+        .superRefine((values, ctx) => {
+          if (!values.isEditing && !values.password) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['password'],
+              message: t('users.passwordRequired'),
+            });
+          } else if (values.password && values.password.length < 8) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['password'],
+              message: t('settings.passwordMinLength'),
+            });
+          }
+        }),
     [t],
   );
   type FormValues = z.infer<typeof schema>;
@@ -67,6 +92,7 @@ export default function Users() {
       role: 'User',
       assignedBranches: [],
       password: '',
+      isEditing: false,
     },
   });
 
@@ -78,6 +104,7 @@ export default function Users() {
       role: editing?.role ?? 'User',
       assignedBranches: editing?.assignedBranches ?? [],
       password: '',
+      isEditing: !!editing,
     });
   }, [open, editing, reset]);
 
@@ -92,6 +119,19 @@ export default function Users() {
     if (editing) await updateMut.mutateAsync({ id: editing.id, payload });
     else await createMut.mutateAsync(payload);
     setOpen(false);
+  };
+
+  const onSubmitResetPassword = async () => {
+    if (!resetTarget || resetPasswordValue.length < 8) return;
+    await resetPasswordMut.mutateAsync({ id: resetTarget.id, newPassword: resetPasswordValue });
+    setResetPasswordDone(true);
+  };
+
+  const closeResetDialog = () => {
+    setResetTarget(null);
+    setResetPasswordValue('');
+    setResetPasswordDone(false);
+    resetPasswordMut.reset();
   };
 
   const columns: GridColDef<User>[] = [
@@ -124,18 +164,25 @@ export default function Users() {
     {
       field: 'actions',
       headerName: '',
-      width: 80,
+      width: 120,
       sortable: false,
       renderCell: (p) => (
-        <IconButton
-          size="small"
-          onClick={() => {
-            setEditing(p.row);
-            setOpen(true);
-          }}
-        >
-          <EditIcon fontSize="small" />
-        </IconButton>
+        <Stack direction="row" spacing={0.5}>
+          <IconButton
+            size="small"
+            onClick={() => {
+              setEditing(p.row);
+              setOpen(true);
+            }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton>
+          <Tooltip title={t('users.resetPassword')}>
+            <IconButton size="small" onClick={() => setResetTarget(p.row)}>
+              <LockResetIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
       ),
     },
   ];
@@ -227,6 +274,7 @@ export default function Users() {
                   label={editing ? t('users.resetPasswordOptional') : t('common.password')}
                   type="password"
                   fullWidth
+                  required={!editing}
                   {...register('password')}
                   error={!!errors.password}
                   helperText={errors.password?.message}
@@ -276,6 +324,52 @@ export default function Users() {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      <Dialog open={!!resetTarget} onClose={closeResetDialog} maxWidth="xs" fullWidth>
+        <DialogTitle>{t('users.resetPasswordFor', { name: resetTarget?.displayName })}</DialogTitle>
+        <DialogContent dividers>
+          {resetPasswordMut.isError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {getErrorMessage(resetPasswordMut.error)}
+            </Alert>
+          )}
+          {resetPasswordDone ? (
+            <Alert severity="success">{t('users.resetPasswordSuccess')}</Alert>
+          ) : (
+            <Stack spacing={1.5}>
+              <Typography variant="body2" color="text.secondary">
+                {t('users.resetPasswordHint')}
+              </Typography>
+              <TextField
+                label={t('settings.newPassword')}
+                type="password"
+                fullWidth
+                autoFocus
+                value={resetPasswordValue}
+                onChange={(e) => setResetPasswordValue(e.target.value)}
+                error={resetPasswordValue.length > 0 && resetPasswordValue.length < 8}
+                helperText={
+                  resetPasswordValue.length > 0 && resetPasswordValue.length < 8
+                    ? t('settings.passwordMinLength')
+                    : ' '
+                }
+              />
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button onClick={closeResetDialog}>{t('common.close')}</Button>
+          {!resetPasswordDone && (
+            <Button
+              variant="contained"
+              disabled={resetPasswordValue.length < 8 || resetPasswordMut.isPending}
+              onClick={onSubmitResetPassword}
+            >
+              {resetPasswordMut.isPending ? t('common.saving') : t('users.resetPassword')}
+            </Button>
+          )}
+        </DialogActions>
       </Dialog>
     </Box>
   );

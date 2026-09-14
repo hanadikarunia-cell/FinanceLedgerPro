@@ -81,6 +81,17 @@ public class UserService : IUserService
         return updated.ToDto();
     }
 
+    public async Task ResetPasswordAsync(string id, string newPassword, CancellationToken ct = default)
+    {
+        EnsureManager();
+
+        var user = await _repo.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException(nameof(User), id);
+
+        await _identityProvider.AdminUpdateUserAsync(user.Id, password: newPassword, ct: ct);
+        await _audit.LogAsync(AuditAction.Update, nameof(User), id, null, new { PasswordReset = true }, ct);
+    }
+
     private void EnsureManager()
     {
         if (!_currentUser.IsManager)

@@ -16,4 +16,8 @@ export const usersApi = {
     const { data } = await axiosClient.put<User>(`/users/${id}`, payload);
     return data;
   },
+
+  async resetPassword(id: string, newPassword: string): Promise<void> {
+    await axiosClient.post(`/users/${id}/reset-password`, { newPassword });
+  },
 };

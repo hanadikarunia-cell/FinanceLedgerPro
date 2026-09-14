@@ -181,7 +181,12 @@
     "assignedBranches": "Cabang yang ditugaskan",
     "nameRequired": "Nama wajib diisi",
     "emailRequired": "Email wajib diisi",
-    "emailInvalid": "Masukkan email yang valid"
+    "emailInvalid": "Masukkan email yang valid",
+    "passwordRequired": "Kata sandi wajib diisi untuk membuat akun",
+    "resetPassword": "Atur ulang kata sandi",
+    "resetPasswordFor": "Atur ulang kata sandi untuk {{name}}",
+    "resetPasswordHint": "Langsung menetapkan kata sandi baru — kata sandi saat ini tidak diperlukan.",
+    "resetPasswordSuccess": "Kata sandi berhasil diatur ulang."
   },
   "branches": {
     "title": "Cabang",

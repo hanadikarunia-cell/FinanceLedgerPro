@@ -29,3 +29,11 @@ public class UpdateUserDto
     public string[] AssignedBranches { get; set; } = Array.Empty<string>();
     public bool IsActive { get; set; }
 }
+
+/// <summary>Manager-initiated password reset for another user — no proof of the old
+/// password is required, since Manager authority is itself the check (distinct from
+/// the self-service /auth/reset-password flow, which requires the current password).</summary>
+public class ResetUserPasswordDto
+{
+    public string NewPassword { get; set; } = string.Empty;
+}

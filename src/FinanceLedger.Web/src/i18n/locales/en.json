@@ -181,7 +181,12 @@
     "assignedBranches": "Assigned branches",
     "nameRequired": "Name is required",
     "emailRequired": "Email is required",
-    "emailInvalid": "Enter a valid email"
+    "emailInvalid": "Enter a valid email",
+    "passwordRequired": "A password is required to create the account",
+    "resetPassword": "Reset password",
+    "resetPasswordFor": "Reset password for {{name}}",
+    "resetPasswordHint": "Sets a new password immediately — the current one is not required.",
+    "resetPasswordSuccess": "Password reset."
   },
   "branches": {
     "title": "Branches",

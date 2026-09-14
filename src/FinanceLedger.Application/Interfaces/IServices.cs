@@ -33,6 +33,7 @@ public interface IUserService
     Task<IReadOnlyList<UserDto>> GetAllAsync(CancellationToken ct = default);
     Task<UserDto> CreateAsync(CreateUserDto dto, CancellationToken ct = default);
     Task<UserDto> UpdateAsync(string id, UpdateUserDto dto, CancellationToken ct = default);
+    Task ResetPasswordAsync(string id, string newPassword, CancellationToken ct = default);
 }
 
 public interface IBranchService

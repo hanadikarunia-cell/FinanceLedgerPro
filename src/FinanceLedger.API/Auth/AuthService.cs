@@ -26,15 +26,18 @@ public class AuthService : ILoginService
     private readonly IUserRepository _userRepository;
     private readonly IIdentityProviderService _identityProvider;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ICurrentUserService _currentUser;
 
     public AuthService(
         IUserRepository userRepository,
         IIdentityProviderService identityProvider,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ICurrentUserService currentUser)
     {
         _userRepository = userRepository;
         _identityProvider = identityProvider;
         _httpContextAccessor = httpContextAccessor;
+        _currentUser = currentUser;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
@@ -88,8 +91,23 @@ public class AuthService : ILoginService
         }
     }
 
+    /// <summary>
+    /// Strictly self-service: a caller may only reset their own password, and must
+    /// always prove they know the current one. (An earlier version of this method
+    /// only required CurrentPassword "if provided" — since ResetPasswordRequest.Email
+    /// was never checked against the caller's identity, that let any authenticated
+    /// user reset any other user's password by simply omitting CurrentPassword. A
+    /// Manager resetting someone else's forgotten password goes through the separate
+    /// POST /users/{id}/reset-password admin endpoint instead, which is authorized by
+    /// role rather than by proving the old password.)
+    /// </summary>
     public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
     {
+        if (!string.Equals(request.Email, _currentUser.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ForbiddenException("You can only reset your own password.");
+        }
+
         var user = await _userRepository.GetByEmailAsync(request.Email, ct);
         if (user is null || !user.IsActive)
         {
@@ -104,16 +122,21 @@ public class AuthService : ILoginService
             });
         }
 
-        if (!string.IsNullOrWhiteSpace(request.CurrentPassword))
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword))
         {
-            try
+            throw new ValidationAppException(new Dictionary<string, string[]>
             {
-                await _identityProvider.PasswordGrantAsync(request.Email, request.CurrentPassword, ct);
-            }
-            catch (IdentityProviderException)
-            {
-                throw new ForbiddenException("Current password is incorrect.");
-            }
+                [nameof(request.CurrentPassword)] = new[] { "Your current password is required." }
+            });
+        }
+
+        try
+        {
+            await _identityProvider.PasswordGrantAsync(request.Email, request.CurrentPassword, ct);
+        }
+        catch (IdentityProviderException)
+        {
+            throw new ForbiddenException("Current password is incorrect.");
         }
 
         await _identityProvider.AdminUpdateUserAsync(user.Id, password: request.NewPassword, ct: ct);

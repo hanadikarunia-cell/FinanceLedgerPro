@@ -155,6 +155,12 @@ export default function Cars() {
       valueFormatter: (value) => branchNameById.get(value as string) ?? (value as string),
     },
     {
+      field: 'monthlyBill',
+      headerName: t('cars.monthlyBill'),
+      width: 150,
+      valueFormatter: (value) => formatCurrency(value as number),
+    },
+    {
       field: 'remainingDebt',
       headerName: t('cars.remainingDebt'),
       width: 150,
