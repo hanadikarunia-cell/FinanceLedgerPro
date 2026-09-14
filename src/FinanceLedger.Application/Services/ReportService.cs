@@ -20,34 +20,51 @@ public class ReportService : IReportService
         _currentUser = currentUser;
     }
 
-    public Task<ReportDto> GetDailyAsync(DateTime date, CancellationToken ct = default)
+    public Task<ReportDto> GetDailyAsync(DateTime date, ReportQueryOptions? options = null, CancellationToken ct = default)
     {
-        var from = date.Date;
-        var to = from.AddDays(1).AddTicks(-1);
-        return BuildAsync($"Daily Report - {from:yyyy-MM-dd}", from, to, ct);
+        var periodFrom = date.Date;
+        var periodTo = periodFrom.AddDays(1).AddTicks(-1);
+        var from = options?.From ?? periodFrom;
+        var to = options?.To ?? periodTo;
+        return BuildAsync($"Daily Report - {periodFrom:yyyy-MM-dd}", from, to, options, ct);
     }
 
-    public Task<ReportDto> GetMonthlyAsync(int year, int month, CancellationToken ct = default)
+    public Task<ReportDto> GetMonthlyAsync(int year, int month, ReportQueryOptions? options = null, CancellationToken ct = default)
     {
-        var from = new DateTime(year, month, 1);
-        var to = from.AddMonths(1).AddTicks(-1);
-        return BuildAsync($"Monthly Report - {from:yyyy-MM}", from, to, ct);
+        var periodFrom = new DateTime(year, month, 1);
+        var periodTo = periodFrom.AddMonths(1).AddTicks(-1);
+        var from = options?.From ?? periodFrom;
+        var to = options?.To ?? periodTo;
+        return BuildAsync($"Monthly Report - {periodFrom:yyyy-MM}", from, to, options, ct);
     }
 
-    public Task<ReportDto> GetYearlyAsync(int year, CancellationToken ct = default)
+    public Task<ReportDto> GetYearlyAsync(int year, ReportQueryOptions? options = null, CancellationToken ct = default)
     {
-        var from = new DateTime(year, 1, 1);
-        var to = from.AddYears(1).AddTicks(-1);
-        return BuildAsync($"Yearly Report - {year}", from, to, ct);
+        var periodFrom = new DateTime(year, 1, 1);
+        var periodTo = periodFrom.AddYears(1).AddTicks(-1);
+        var from = options?.From ?? periodFrom;
+        var to = options?.To ?? periodTo;
+        return BuildAsync($"Yearly Report - {year}", from, to, options, ct);
     }
 
-    private async Task<ReportDto> BuildAsync(string period, DateTime from, DateTime to, CancellationToken ct)
+    private async Task<ReportDto> BuildAsync(string period, DateTime from, DateTime to, ReportQueryOptions? options, CancellationToken ct)
     {
         IReadOnlyCollection<string>? restrictBranches = _currentUser.IsManager ? null : _currentUser.AssignedBranches;
         var tx = await _repo.GetByDateRangeAsync(from, to, restrictBranches, ct);
 
         if (!_currentUser.IsManager)
             tx = tx.Where(t => t.CreatedBy == _currentUser.UserId).ToList();
+
+        if (!string.IsNullOrWhiteSpace(options?.Category))
+            tx = tx.Where(t => string.Equals(t.Category, options.Category, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        if (!string.IsNullOrWhiteSpace(options?.Branch))
+            tx = tx.Where(t => t.Branch == options.Branch).ToList();
+
+        // A non-Manager is already implicitly restricted to their own transactions above;
+        // the UserId filter is a Manager-only refinement to look at one person's activity.
+        if (_currentUser.IsManager && !string.IsNullOrWhiteSpace(options?.UserId))
+            tx = tx.Where(t => t.CreatedBy == options.UserId).ToList();
 
         // Imprest fund model (matches DashboardService): cash leaves the Main Ledger when petty cash
         // is FUNDED, not when a User later spends it. A non-Manager viewer only ever sees their own
@@ -95,7 +112,7 @@ public class ReportService : IReportService
             TransactionCount = tx.Count,
             IncomeByCategory = GroupByCategory(income),
             ExpenseByCategory = GroupByCategory(expenseByCategory),
-            Transactions = tx.OrderBy(t => t.Date).Select(t => t.ToDto()).ToList()
+            Transactions = tx.OrderByDescending(t => t.Date).Select(t => t.ToDto()).ToList()
         };
     }
 

@@ -4,14 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TransactionForm } from '@/components/TransactionForm';
 import { SyncStatusBar } from '@/components/SyncStatusBar';
 
+// Must match FinanceLedger.Domain.Constants.TransactionCategories.ExpenseCategories
+// on the backend exactly — the API rejects any category outside this list.
 const EXPENSE_CATEGORIES = [
-  'Rent',
+  'Service',
   'Salaries',
-  'Utilities',
-  'Supplies',
-  'Travel',
-  'Marketing',
-  'Other Expense',
+  'Entertainment',
+  'Office Utilities',
+  'Taxes - PPN',
+  'Taxes - PPH21',
+  'Taxes - PPH25',
+  'Taxes - PPH23',
+  'Taxes - Other',
+  'Car Debt',
+  'Other',
 ];
 
 export function ExpenseEntryScreen() {

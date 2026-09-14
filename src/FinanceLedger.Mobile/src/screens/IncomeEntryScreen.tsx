@@ -4,13 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TransactionForm } from '@/components/TransactionForm';
 import { SyncStatusBar } from '@/components/SyncStatusBar';
 
-const INCOME_CATEGORIES = [
-  'Sales',
-  'Service Revenue',
-  'Interest',
-  'Refund',
-  'Other Income',
-];
+// Must match FinanceLedger.Domain.Constants.TransactionCategories.IncomeCategories
+// on the backend exactly — the API rejects any category outside this list.
+const INCOME_CATEGORIES = ['Rent', 'Interest', 'Invoice', 'Salaries', 'Other'];
 
 export function IncomeEntryScreen() {
   return (

@@ -24,9 +24,9 @@ public interface IDashboardService
 
 public interface IReportService
 {
-    Task<ReportDto> GetDailyAsync(DateTime date, CancellationToken ct = default);
-    Task<ReportDto> GetMonthlyAsync(int year, int month, CancellationToken ct = default);
-    Task<ReportDto> GetYearlyAsync(int year, CancellationToken ct = default);
+    Task<ReportDto> GetDailyAsync(DateTime date, ReportQueryOptions? options = null, CancellationToken ct = default);
+    Task<ReportDto> GetMonthlyAsync(int year, int month, ReportQueryOptions? options = null, CancellationToken ct = default);
+    Task<ReportDto> GetYearlyAsync(int year, ReportQueryOptions? options = null, CancellationToken ct = default);
 }
 
 public interface IUserService

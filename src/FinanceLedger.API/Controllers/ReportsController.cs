@@ -22,12 +22,28 @@ public class ReportsController : ControllerBase
 
     [HttpGet("daily")]
     [ProducesResponseType(typeof(ReportDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ReportDto>> Daily([FromQuery] DateTime? date, CancellationToken ct)
-        => Ok(await _reportService.GetDailyAsync(date ?? DateTime.UtcNow.Date, ct));
+    public async Task<ActionResult<ReportDto>> Daily(
+        [FromQuery] DateTime? date,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] string? category,
+        [FromQuery] string? branch,
+        [FromQuery] string? userId,
+        CancellationToken ct)
+        => Ok(await _reportService.GetDailyAsync(
+            date ?? DateTime.UtcNow.Date, BuildOptions(from, to, category, branch, userId), ct));
 
     [HttpGet("monthly")]
     [ProducesResponseType(typeof(ReportDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ReportDto>> Monthly([FromQuery] int year, [FromQuery] int month, CancellationToken ct)
+    public async Task<ActionResult<ReportDto>> Monthly(
+        [FromQuery] int year,
+        [FromQuery] int month,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] string? category,
+        [FromQuery] string? branch,
+        [FromQuery] string? userId,
+        CancellationToken ct)
     {
         if (year <= 0)
         {
@@ -39,18 +55,36 @@ public class ReportsController : ControllerBase
             month = DateTime.UtcNow.Month;
         }
 
-        return Ok(await _reportService.GetMonthlyAsync(year, month, ct));
+        return Ok(await _reportService.GetMonthlyAsync(
+            year, month, BuildOptions(from, to, category, branch, userId), ct));
     }
 
     [HttpGet("yearly")]
     [ProducesResponseType(typeof(ReportDto), StatusCodes.Status200OK)]
-    public async Task<ActionResult<ReportDto>> Yearly([FromQuery] int year, CancellationToken ct)
+    public async Task<ActionResult<ReportDto>> Yearly(
+        [FromQuery] int year,
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        [FromQuery] string? category,
+        [FromQuery] string? branch,
+        [FromQuery] string? userId,
+        CancellationToken ct)
     {
         if (year <= 0)
         {
             year = DateTime.UtcNow.Year;
         }
 
-        return Ok(await _reportService.GetYearlyAsync(year, ct));
+        return Ok(await _reportService.GetYearlyAsync(year, BuildOptions(from, to, category, branch, userId), ct));
     }
+
+    private static ReportQueryOptions BuildOptions(
+        DateTime? from, DateTime? to, string? category, string? branch, string? userId) => new()
+    {
+        From = from,
+        To = to,
+        Category = category,
+        Branch = branch,
+        UserId = userId
+    };
 }
