@@ -73,16 +73,21 @@ JWT without an extra database round-trip or a custom Postgres Auth Hook.
 
 ## 4. Render (API + Worker)
 
-Two services, same repo:
+Two services, same repo, both defined in the root `render.yaml` Blueprint. Render has
+no native .NET buildpack, so both build from a Dockerfile:
 
-- **API** — Web Service, `src/FinanceLedger.API`. Build: `dotnet publish -c Release -o
-  out`. Start: `dotnet out/FinanceLedger.API.dll`. Render injects `PORT`; the app
-  binds to it automatically via Kestrel's default `ASPNETCORE_URLS` handling — set
-  `ASPNETCORE_URLS=http://+:%PORT%` if it doesn't pick it up implicitly on Render's
-  runtime. Health check path: `/health`.
-- **Worker** — Background Worker, `src/FinanceLedger.Worker`. Build: `dotnet publish
-  -c Release -o out`. Start: `dotnet out/FinanceLedger.Worker.dll`. No public port; it
-  runs the Google Sheets sync loop on the interval configured via `Sync:IntervalMinutes`.
+- **API** — Web Service, built from `src/FinanceLedger.API/Dockerfile` (multi-stage:
+  `dotnet publish` in the SDK image, `mcr.microsoft.com/dotnet/aspnet:8.0` at runtime).
+  The container entrypoint expands Render's injected `PORT` into
+  `ASPNETCORE_URLS` at startup. Health check path: `/health`.
+- **Worker** — Background Worker, built from `src/FinanceLedger.Worker/Dockerfile`
+  (same pattern, `mcr.microsoft.com/dotnet/runtime:8.0` at runtime — no ASP.NET
+  needed). No public port; it runs the Google Sheets sync loop on the interval
+  configured via `Sync__IntervalMinutes`.
+
+Both Dockerfiles expect the **repo root** as the Docker build context (`dockerContext:
+.` in `render.yaml`), since the API/Worker projects reference the sibling
+Domain/Application/Infrastructure projects by relative path.
 
 Both read the same `POSTGRES_CONNECTION_STRING`/`SUPABASE_*`/`RESEND_*` environment
 variables (see [.env.example](../.env.example)); the Worker additionally needs

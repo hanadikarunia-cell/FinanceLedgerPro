@@ -47,33 +47,31 @@ service_role key, and relays downloads through `GET /api/v1/files/{id}`).
 
 ## 4. Create the Render services
 
-Sign in to [render.com](https://render.com) with GitHub and grant access to this repo.
+Render has no native .NET buildpack, so both services build from the Dockerfiles at
+`src/FinanceLedger.API/Dockerfile` and `src/FinanceLedger.Worker/Dockerfile`
+(multi-stage: `dotnet publish` in an SDK image, then a slim ASP.NET/runtime image).
+The repo root `render.yaml` is a Render **Blueprint** that declares both services so
+you don't have to configure build/start commands by hand.
 
-### API (Web Service)
-1. New → Web Service → select this repo.
-2. Root/build settings:
-   - Runtime: Docker, or Native (.NET) if Render's native .NET runtime is selected.
-   - Build command: `dotnet publish src/FinanceLedger.API -c Release -o out`
-   - Start command: `dotnet out/FinanceLedger.API.dll`
-3. Health check path: `/health`.
-4. Environment variables (Render dashboard → Environment): every `POSTGRES_*`,
-   `SUPABASE_*`, `RESEND_*`, and `FRONTEND_ORIGIN`/`Cors__Origins__0` value from
-   [.env.example](../.env.example). Set `ASPNETCORE_ENVIRONMENT=Production`.
-5. Deploy. Confirm `https://<service>.onrender.com/health` returns 200, and
-   `https://<service>.onrender.com/health/ready` returns 200 once Postgres/Storage are
-   reachable.
+1. Sign in to [render.com](https://render.com) with GitHub and grant access to this repo.
+2. **New → Blueprint** → select this repo. Render reads `render.yaml` and proposes
+   two services: `financeledgerpro-api` (Web Service) and `financeledgerpro-worker`
+   (Background Worker), both on the free plan.
+3. Render will prompt for every environment variable marked `sync: false` in
+   `render.yaml` — fill these in from [.env.example](../.env.example) /
+   step 1-3 above (`ConnectionStrings__Postgres`, `Supabase__Url`,
+   `Supabase__AnonKey`, `Supabase__ServiceRoleKey`, `Resend__ApiKey`,
+   `Resend__SenderAddress`, `Cors__Origins__0` for the API;
+   `GoogleSheets__SpreadsheetId`/`GoogleSheets__CredentialsJson` for the worker —
+   paste the service account JSON as a single-line value).
+4. Apply the blueprint. Both services build and deploy.
+5. Confirm `https://<api-service>.onrender.com/health` returns 200, and
+   `https://<api-service>.onrender.com/health/ready` returns 200 once Postgres/Storage
+   are reachable. Check the worker's logs for "Google Sheets sync worker started."
 
-### Worker (Background Worker)
-1. New → Background Worker → same repo.
-2. Build command: `dotnet publish src/FinanceLedger.Worker -c Release -o out`
-3. Start command: `dotnet out/FinanceLedger.Worker.dll`
-4. Environment variables: same `POSTGRES_*`/`SUPABASE_*` as the API, plus
-   `GOOGLE_SHEET_ID` and `GOOGLE_SHEETS_CREDENTIALS_JSON` (paste the service account
-   JSON as a single-line value, or use a Render Secret File and point
-   `GoogleSheets:CredentialsJson` at its path).
-5. Deploy. Check the Render logs for "Google Sheets sync worker started."
-
-Both services auto-redeploy on every push to the repo's default branch.
+Both services auto-redeploy on every push to the repo's default branch. If you'd
+rather configure services by hand instead of via the Blueprint, use runtime **Docker**
+with the same two Dockerfiles as the Docker build context set to the repo root.
 
 ## 5. Create the Vercel project
 

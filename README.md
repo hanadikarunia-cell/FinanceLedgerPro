@@ -78,9 +78,9 @@ FinanceLedgerPro/
 ├── src/
 │   ├── FinanceLedger.Domain/          # Entities & enums (no dependencies)
 │   ├── FinanceLedger.Application/     # DTOs, interfaces, services, validators
-│   ├── FinanceLedger.Infrastructure/  # EF Core Cosmos, repositories, blob, exporters, JWT, email
-│   ├── FinanceLedger.API/             # Controllers, middleware, Program.cs, OpenAPI
-│   ├── FinanceLedger.Worker/          # Google Sheets background sync
+│   ├── FinanceLedger.Infrastructure/  # EF Core Npgsql repos, Supabase Storage/Auth, Resend, exporters
+│   ├── FinanceLedger.API/             # Controllers, middleware, Program.cs, OpenAPI, Dockerfile
+│   ├── FinanceLedger.Worker/          # Google Sheets background sync, Dockerfile
 │   ├── FinanceLedger.Web/             # React + TypeScript web frontend
 │   └── FinanceLedger.Mobile/          # React Native Android app
 │
@@ -99,6 +99,7 @@ FinanceLedgerPro/
 │   ├── free-tier-deployment.md        # Step-by-step Supabase/Render/Vercel runbook
 │   └── api-reference.md
 │
+├── render.yaml                        # Render Blueprint (API Web Service + Worker)
 ├── .env.example                       # All env vars needed across Render + Vercel
 └── README.md
 ```
