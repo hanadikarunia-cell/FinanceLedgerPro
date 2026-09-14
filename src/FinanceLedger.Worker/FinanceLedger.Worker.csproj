@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>FinanceLedger.Worker</RootNamespace>
+    <AssemblyName>FinanceLedger.Worker</AssemblyName>
+    <UserSecretsId>finance-ledger-worker</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FinanceLedger.Application\FinanceLedger.Application.csproj" />
+    <ProjectReference Include="..\FinanceLedger.Infrastructure\FinanceLedger.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

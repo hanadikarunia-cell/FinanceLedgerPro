@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "env": {
+      "value": "dev"
+    },
+    "location": {
+      "value": "eastus"
+    },
+    "appName": {
+      "value": "financeledger"
+    },
+    "appServicePlanSku": {
+      "value": "B1"
+    },
+    "cosmosCapacityMode": {
+      "value": "serverless"
+    },
+    "cosmosAutoscaleMaxThroughput": {
+      "value": 4000
+    },
+    "adminObjectId": {
+      "value": ""
+    },
+    "tags": {
+      "value": {
+        "application": "FinanceLedgerPro",
+        "environment": "dev",
+        "managedBy": "bicep",
+        "costCenter": "finance-dev"
+      }
+    }
+  }
+}

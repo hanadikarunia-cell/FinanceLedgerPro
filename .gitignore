@@ -1,0 +1,74 @@
+# ---------- .NET ----------
+bin/
+obj/
+out/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+project.lock.json
+artifacts/
+publish/
+*.dll
+*.pdb
+TestResults/
+coverage/
+*.trx
+*.coverage
+*.coveragexml
+
+# ---------- ASP.NET secrets ----------
+appsettings.*.local.json
+secrets.json
+
+# ---------- Node / React / React Native ----------
+node_modules/
+dist/
+build/
+.expo/
+.expo-shared/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp.*
+.yarn/*
+
+# Vite
+.vite/
+
+# ---------- React Native / Android ----------
+*.keystore
+!debug.keystore
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+*.apk
+*.aab
+*.jsbundle
+
+# ---------- Environment ----------
+.env
+.env.*
+!.env.example
+
+# ---------- IDE ----------
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---------- Azure / IaC ----------
+*.azurePubxml
+.azure/
+
+# ---------- Misc ----------
+*.tmp
+*.bak
+
+# ---------- Local tooling ----------
+.claude/

@@ -1,0 +1,191 @@
+using FinanceLedger.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace FinanceLedger.Infrastructure.Persistence;
+
+public class LedgerDbContext : DbContext
+{
+    public LedgerDbContext(DbContextOptions<LedgerDbContext> options) : base(options)
+    {
+    }
+
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<PettyCashRequest> PettyCashRequests => Set<PettyCashRequest>();
+    public DbSet<Car> Cars => Set<Car>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        // Schema/indexes are owned by supabase/migrations/*.sql — this mapping targets
+        // the tables that SQL creates. UseXminAsConcurrencyToken relies on Postgres's
+        // built-in per-row xmin system column, so no explicit version column is needed.
+        modelBuilder.Entity<User>(builder =>
+        {
+            builder.ToTable("users");
+            builder.HasKey(u => u.Id);
+            builder.Property(u => u.Id).HasColumnName("id");
+            builder.Property(u => u.Email).HasColumnName("email");
+            builder.Property(u => u.DisplayName).HasColumnName("display_name");
+            builder.Property(u => u.Role).HasColumnName("role").HasConversion<string>();
+            builder.Property(u => u.AssignedBranches).HasColumnName("assigned_branches");
+            builder.Property(u => u.IsActive).HasColumnName("is_active");
+            builder.Property(u => u.CreatedDate).HasColumnName("created_date");
+            builder.Property(u => u.PasswordHash).HasColumnName("password_hash");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
+        modelBuilder.Entity<Transaction>(builder =>
+        {
+            builder.ToTable("transactions");
+            builder.HasKey(t => t.Id);
+            builder.Property(t => t.Id).HasColumnName("id");
+            builder.Property(t => t.Type).HasColumnName("type").HasConversion<string>();
+            builder.Property(t => t.Category).HasColumnName("category");
+            builder.Property(t => t.Description).HasColumnName("description");
+            builder.Property(t => t.Amount).HasColumnName("amount");
+            builder.Property(t => t.Date).HasColumnName("transaction_date");
+            builder.Property(t => t.Branch).HasColumnName("branch");
+            builder.Property(t => t.CreatedBy).HasColumnName("created_by");
+            builder.Property(t => t.CreatedByName).HasColumnName("created_by_name");
+            builder.Property(t => t.CreatedDate).HasColumnName("created_date");
+            builder.Property(t => t.ApprovalStatus).HasColumnName("status").HasConversion<string>();
+            builder.Property(t => t.ApprovedBy).HasColumnName("approved_by");
+            builder.Property(t => t.ApprovedDate).HasColumnName("approved_date");
+            builder.Property(t => t.AttachmentIds).HasColumnName("attachment_ids");
+            builder.Property(t => t.RelatedUserId).HasColumnName("related_user_id");
+            builder.Property(t => t.CarId).HasColumnName("car_id");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
+        modelBuilder.Entity<AuditLog>(builder =>
+        {
+            builder.ToTable("audit_logs");
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.Id).HasColumnName("id");
+            builder.Property(a => a.UserId).HasColumnName("user_id");
+            builder.Property(a => a.UserName).HasColumnName("user_name");
+            builder.Property(a => a.Action).HasColumnName("action").HasConversion<string>();
+            builder.Property(a => a.Entity).HasColumnName("entity");
+            builder.Property(a => a.EntityId).HasColumnName("entity_id");
+            builder.Property(a => a.OldValue).HasColumnName("old_value");
+            builder.Property(a => a.NewValue).HasColumnName("new_value");
+            builder.Property(a => a.Timestamp).HasColumnName("timestamp");
+            // Append-only — no updates, so no concurrency token needed.
+        });
+
+        modelBuilder.Entity<Branch>(builder =>
+        {
+            builder.ToTable("branches");
+            builder.HasKey(b => b.Id);
+            builder.Property(b => b.Id).HasColumnName("id");
+            builder.Property(b => b.Name).HasColumnName("name");
+            builder.Property(b => b.Code).HasColumnName("code");
+            builder.Property(b => b.Address).HasColumnName("address");
+            builder.Property(b => b.IsActive).HasColumnName("is_active");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
+        modelBuilder.Entity<Attachment>(builder =>
+        {
+            builder.ToTable("attachments");
+            builder.HasKey(a => a.Id);
+            builder.Property(a => a.Id).HasColumnName("id");
+            builder.Property(a => a.TransactionId).HasColumnName("transaction_id");
+            builder.Property(a => a.FileName).HasColumnName("file_name");
+            builder.Property(a => a.ContentType).HasColumnName("content_type");
+            builder.Property(a => a.SizeBytes).HasColumnName("size_bytes");
+            builder.Property(a => a.BlobUrl).HasColumnName("storage_path");
+            builder.Property(a => a.UploadedBy).HasColumnName("uploaded_by");
+            builder.Property(a => a.UploadedDate).HasColumnName("uploaded_date");
+        });
+
+        modelBuilder.Entity<PettyCashRequest>(builder =>
+        {
+            builder.ToTable("petty_cash_requests");
+            builder.HasKey(p => p.Id);
+            builder.Property(p => p.Id).HasColumnName("id");
+            builder.Property(p => p.Amount).HasColumnName("amount");
+            builder.Property(p => p.Reason).HasColumnName("reason");
+            builder.Property(p => p.Branch).HasColumnName("branch");
+            builder.Property(p => p.RequestedBy).HasColumnName("requested_by");
+            builder.Property(p => p.RequestedByName).HasColumnName("requested_by_name");
+            builder.Property(p => p.RequestedDate).HasColumnName("requested_date");
+            builder.Property(p => p.Status).HasColumnName("status").HasConversion<string>();
+            builder.Property(p => p.ApprovedBy).HasColumnName("approved_by");
+            builder.Property(p => p.ApprovedDate).HasColumnName("approved_date");
+            builder.Property(p => p.LinkedTransactionId).HasColumnName("linked_transaction_id");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
+        modelBuilder.Entity<Car>(builder =>
+        {
+            builder.ToTable("cars");
+            builder.HasKey(c => c.Id);
+            builder.Property(c => c.Id).HasColumnName("id");
+            builder.Property(c => c.Branch).HasColumnName("branch");
+            builder.Property(c => c.Client).HasColumnName("client");
+            builder.Property(c => c.Type).HasColumnName("type");
+            builder.Property(c => c.Model).HasColumnName("model");
+            builder.Property(c => c.PlateNumber).HasColumnName("plate_number");
+            builder.Property(c => c.MonthlyBill).HasColumnName("monthly_bill");
+            builder.Property(c => c.InitialDebt).HasColumnName("initial_debt");
+            builder.Property(c => c.ContractStartDate).HasColumnName("contract_start_date");
+            builder.Property(c => c.ContractDurationMonths).HasColumnName("contract_duration_months");
+            builder.Property(c => c.Notes).HasColumnName("notes");
+            builder.Property(c => c.IsActive).HasColumnName("is_active");
+            builder.Property(c => c.CreatedBy).HasColumnName("created_by");
+            builder.Property(c => c.CreatedDate).HasColumnName("created_date");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
+        modelBuilder.Entity<Invoice>(builder =>
+        {
+            builder.ToTable("invoices");
+            builder.HasKey(i => i.Id);
+            builder.Property(i => i.Id).HasColumnName("id");
+            builder.Property(i => i.Type).HasColumnName("type").HasConversion<string>();
+            builder.Property(i => i.Branch).HasColumnName("branch");
+            builder.Property(i => i.ClientName).HasColumnName("client_name");
+            builder.Property(i => i.InvoiceDate).HasColumnName("invoice_date");
+            builder.Property(i => i.CarId).HasColumnName("car_id");
+            builder.Property(i => i.MonthlyBill).HasColumnName("monthly_bill");
+            builder.Property(i => i.DriverName).HasColumnName("driver_name");
+            builder.Property(i => i.WageDeposit).HasColumnName("wage_deposit");
+            builder.Property(i => i.Fee).HasColumnName("fee");
+            builder.Property(i => i.TaxScheme).HasColumnName("tax_scheme").HasConversion<string>();
+            builder.Property(i => i.PpnAmount).HasColumnName("ppn_amount");
+            builder.Property(i => i.Pph23Amount).HasColumnName("pph23_amount");
+            builder.Property(i => i.TotalAmount).HasColumnName("total_amount");
+            builder.Property(i => i.Status).HasColumnName("status").HasConversion<string>();
+            builder.Property(i => i.PaidDate).HasColumnName("paid_date");
+            builder.Property(i => i.LinkedIncomeTransactionId).HasColumnName("linked_income_transaction_id");
+            builder.Property(i => i.LinkedExpenseTransactionId).HasColumnName("linked_expense_transaction_id");
+            builder.Property(i => i.CreatedBy).HasColumnName("created_by");
+            builder.Property(i => i.CreatedByName).HasColumnName("created_by_name");
+            builder.Property(i => i.CreatedDate).HasColumnName("created_date");
+            ConfigureXminConcurrencyToken(builder);
+        });
+    }
+
+    /// <summary>
+    /// Maps Postgres's built-in per-row `xmin` system column as a shadow concurrency
+    /// token, so EF Core throws DbUpdateConcurrencyException on a stale UPDATE without
+    /// needing an explicit version column anywhere in the schema.
+    /// </summary>
+    private static void ConfigureXminConcurrencyToken<TEntity>(EntityTypeBuilder<TEntity> builder)
+        where TEntity : class
+    {
+        builder.Property<uint>("xmin")
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
+            .IsRowVersion();
+    }
+}

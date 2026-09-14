@@ -1,0 +1,95 @@
+name: Mobile Build (Android)
+
+# Builds the React Native / Expo Android app and publishes an APK artifact.
+# Supports two paths: EAS (managed Expo) or a bare gradlew assembleRelease.
+# Set repo variable MOBILE_BUILD_TYPE to "eas" or "gradle" (default: gradle).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/mobile/**'
+      - '.github/workflows/mobile.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  JAVA_VERSION: '17'
+  MOBILE_DIR: src/FinanceLedger.Mobile
+
+jobs:
+  # ---------------------------------------------------------------------------
+  build-eas:
+    name: EAS build (Expo)
+    if: ${{ vars.MOBILE_BUILD_TYPE == 'eas' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.MOBILE_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ env.MOBILE_DIR }}
+        run: npm ci
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build APK (local, no Expo servers)
+        working-directory: ${{ env.MOBILE_DIR }}
+        run: eas build --platform android --profile preview --local --non-interactive --output ${{ github.workspace }}/app-release.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: ${{ github.workspace }}/app-release.apk
+
+  # ---------------------------------------------------------------------------
+  build-gradle:
+    name: Gradle assembleRelease
+    if: ${{ vars.MOBILE_BUILD_TYPE != 'eas' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.MOBILE_DIR }}/package-lock.json
+
+      - name: Setup Java (Temurin ${{ env.JAVA_VERSION }})
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install JS dependencies
+        working-directory: ${{ env.MOBILE_DIR }}
+        run: npm ci
+
+      - name: Build release APK
+        working-directory: ${{ env.MOBILE_DIR }}/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: ${{ env.MOBILE_DIR }}/android/app/build/outputs/apk/release/*.apk
