@@ -86,3 +86,14 @@ public interface IFeedbackService
     Task<FeedbackDto> CreateAsync(CreateFeedbackDto dto, CancellationToken ct = default);
     Task<FeedbackDto> SetSeverityAsync(string id, FeedbackSeverity severity, CancellationToken ct = default);
 }
+
+/// <summary>The app's own "What's New" changelog — admin-authored, as opposed to
+/// user-submitted Feedback. Any authenticated user can read it; only a Manager can
+/// publish, edit, or delete entries.</summary>
+public interface IReleaseNoteService
+{
+    Task<IReadOnlyList<ReleaseNoteDto>> GetAllAsync(CancellationToken ct = default);
+    Task<ReleaseNoteDto> CreateAsync(CreateReleaseNoteDto dto, CancellationToken ct = default);
+    Task<ReleaseNoteDto> UpdateAsync(string id, UpdateReleaseNoteDto dto, CancellationToken ct = default);
+    Task DeleteAsync(string id, CancellationToken ct = default);
+}

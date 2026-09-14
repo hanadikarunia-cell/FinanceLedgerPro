@@ -356,5 +356,30 @@
     "untriaged": "Belum ditinjau",
     "minor": "Minor",
     "major": "Major"
+  },
+  "whatsNew": {
+    "title": "Yang Baru",
+    "subtitle": "Versi aplikasi saat ini dan riwayat perubahan di setiap rilis.",
+    "currentVersion": "Versi Saat Ini",
+    "publishUpdate": "Publikasikan Pembaruan",
+    "editUpdate": "Ubah Pembaruan",
+    "version": "Versi",
+    "updateType": "Jenis Pembaruan",
+    "updateTitle": "Judul",
+    "notes": "Catatan Rilis",
+    "notesHint": "Satu poin per baris.",
+    "notesRequired": "Tambahkan setidaknya satu catatan rilis",
+    "versionRequired": "Versi wajib diisi",
+    "titleRequired": "Judul wajib diisi",
+    "publishedBy": "Dipublikasikan oleh {{name}}",
+    "failedToLoad": "Gagal memuat Yang Baru",
+    "empty": "Belum ada pembaruan yang dipublikasikan.",
+    "deleteTitle": "Hapus pembaruan",
+    "deleteMessage": "Hapus entri v{{version}}? Tindakan ini tidak dapat dibatalkan.",
+    "type": {
+      "Major": "Major",
+      "Minor": "Minor",
+      "Patch": "Patch"
+    }
   }
 }

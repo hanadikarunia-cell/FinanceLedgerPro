@@ -358,5 +358,30 @@
     "untriaged": "Not triaged",
     "minor": "Minor",
     "major": "Major"
+  },
+  "whatsNew": {
+    "title": "What's New",
+    "subtitle": "The current app version and a history of what changed in each release.",
+    "currentVersion": "Current Version",
+    "publishUpdate": "Publish Update",
+    "editUpdate": "Edit Update",
+    "version": "Version",
+    "updateType": "Update Type",
+    "updateTitle": "Title",
+    "notes": "Release Notes",
+    "notesHint": "One bullet point per line.",
+    "notesRequired": "Add at least one release note",
+    "versionRequired": "Version is required",
+    "titleRequired": "Title is required",
+    "publishedBy": "Published by {{name}}",
+    "failedToLoad": "Failed to load What's New",
+    "empty": "No updates published yet.",
+    "deleteTitle": "Delete update",
+    "deleteMessage": "Delete the v{{version}} entry? This cannot be undone.",
+    "type": {
+      "Major": "Major",
+      "Minor": "Minor",
+      "Patch": "Patch"
+    }
   }
 }

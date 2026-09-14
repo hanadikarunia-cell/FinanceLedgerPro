@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<ICarRepository, CarRepository>();
         services.AddScoped<IInvoiceRepository, InvoiceRepository>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+        services.AddScoped<IReleaseNoteRepository, ReleaseNoteRepository>();
 
         services.AddHttpClient<IIdentityProviderService, SupabaseAuthClient>();
         services.AddHttpClient<IBlobStorageService, SupabaseStorageService>();

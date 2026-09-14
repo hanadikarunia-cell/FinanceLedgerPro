@@ -17,6 +17,7 @@ import AccountsPayable from '@/pages/AccountsPayable';
 import AuditLogs from '@/pages/AuditLogs';
 import Settings from '@/pages/Settings';
 import FeedbackPage from '@/pages/Feedback';
+import WhatsNew from '@/pages/WhatsNew';
 import NotFound from '@/pages/NotFound';
 
 export default function AppRoutes() {
@@ -78,6 +79,14 @@ export default function AppRoutes() {
           element={
             <Layout>
               <FeedbackPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/whats-new"
+          element={
+            <Layout>
+              <WhatsNew />
             </Layout>
           }
         />

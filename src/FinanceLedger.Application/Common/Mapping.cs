@@ -118,6 +118,18 @@ public static class Mapping
         AppVersion = f.AppVersion
     };
 
+    public static ReleaseNoteDto ToDto(this ReleaseNote r) => new()
+    {
+        Id = r.Id,
+        Version = r.Version,
+        Title = r.Title,
+        Type = r.Type,
+        Notes = r.Notes,
+        PublishedBy = r.PublishedBy,
+        PublishedByName = r.PublishedByName,
+        PublishedDate = r.PublishedDate
+    };
+
     public static AuditLogDto ToDto(this AuditLog a) => new()
     {
         Id = a.Id,

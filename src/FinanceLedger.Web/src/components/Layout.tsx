@@ -37,6 +37,7 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import FeedbackIcon from '@mui/icons-material/Feedback';
+import NewReleasesIcon from '@mui/icons-material/NewReleases';
 
 import { useAuth } from '@/context/AuthContext';
 import { useColorMode } from '@/context/ThemeContext';
@@ -66,6 +67,7 @@ const NAV_ITEMS: NavItem[] = [
   { labelKey: 'nav.auditLogs', to: '/audit-logs', icon: <HistoryIcon />, roles: ['Manager'] },
   { labelKey: 'nav.settings', to: '/settings', icon: <SettingsIcon /> },
   { labelKey: 'nav.feedback', to: '/feedback', icon: <FeedbackIcon /> },
+  { labelKey: 'whatsNew.title', to: '/whats-new', icon: <NewReleasesIcon /> },
 ];
 
 export default function Layout({ children }: { children: ReactNode }) {

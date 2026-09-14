@@ -21,6 +21,7 @@ public class LedgerDbContext : DbContext
     public DbSet<Car> Cars => Set<Car>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Feedback> FeedbackItems => Set<Feedback>();
+    public DbSet<ReleaseNote> ReleaseNotes => Set<ReleaseNote>();
 
     // Application-layer code (e.g. DashboardService's report date ranges) sometimes
     // builds DateTimes via `new DateTime(y, m, d)`, which defaults to Kind=Unspecified.
@@ -226,6 +227,21 @@ public class LedgerDbContext : DbContext
             builder.Property(f => f.SubmittedByName).HasColumnName("submitted_by_name");
             builder.Property(f => f.SubmittedDate).HasColumnName("submitted_date");
             builder.Property(f => f.AppVersion).HasColumnName("app_version");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
+        modelBuilder.Entity<ReleaseNote>(builder =>
+        {
+            builder.ToTable("release_notes");
+            builder.HasKey(r => r.Id);
+            builder.Property(r => r.Id).HasColumnName("id");
+            builder.Property(r => r.Version).HasColumnName("version");
+            builder.Property(r => r.Title).HasColumnName("title");
+            builder.Property(r => r.Type).HasColumnName("type").HasConversion<string>();
+            builder.Property(r => r.Notes).HasColumnName("notes");
+            builder.Property(r => r.PublishedBy).HasColumnName("published_by");
+            builder.Property(r => r.PublishedByName).HasColumnName("published_by_name");
+            builder.Property(r => r.PublishedDate).HasColumnName("published_date");
             ConfigureXminConcurrencyToken(builder);
         });
     }

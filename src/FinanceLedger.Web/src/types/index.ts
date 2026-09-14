@@ -348,3 +348,23 @@ export interface FeedbackInput {
   imageUrl?: string;
   appVersion: string;
 }
+
+export type ReleaseType = 'Major' | 'Minor' | 'Patch';
+
+export interface ReleaseNote {
+  id: string;
+  version: string;
+  title: string;
+  type: ReleaseType;
+  notes: string[];
+  publishedBy: string;
+  publishedByName: string;
+  publishedDate: string;
+}
+
+export interface ReleaseNoteInput {
+  version: string;
+  title: string;
+  type: ReleaseType;
+  notes: string[];
+}
