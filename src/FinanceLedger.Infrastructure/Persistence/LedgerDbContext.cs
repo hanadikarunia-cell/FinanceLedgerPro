@@ -1,6 +1,8 @@
 using FinanceLedger.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace FinanceLedger.Infrastructure.Persistence;
 
@@ -18,6 +20,44 @@ public class LedgerDbContext : DbContext
     public DbSet<PettyCashRequest> PettyCashRequests => Set<PettyCashRequest>();
     public DbSet<Car> Cars => Set<Car>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+
+    // Application-layer code (e.g. DashboardService's report date ranges) sometimes
+    // builds DateTimes via `new DateTime(y, m, d)`, which defaults to Kind=Unspecified.
+    // Npgsql refuses to write an unspecified-kind DateTime into a `timestamptz` column
+    // (the Cosmos provider never cared about Kind, so this was latent until now).
+    // Normalizing every DateTime at the EF Core boundary fixes this everywhere at once,
+    // without touching business logic: every value in this app is implicitly UTC.
+    // (A plain static method, not inlined into the converters' lambdas below: switch
+    // expressions aren't valid inside the Expression<Func<>> a ValueConverter takes.)
+    private static DateTime ToUtc(DateTime v) => v.Kind switch
+    {
+        DateTimeKind.Utc => v,
+        DateTimeKind.Local => v.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+    };
+
+    private sealed class UtcDateTimeValueConverter : ValueConverter<DateTime, DateTime>
+    {
+        public UtcDateTimeValueConverter() : base(v => ToUtc(v), v => DateTime.SpecifyKind(v, DateTimeKind.Utc))
+        {
+        }
+    }
+
+    private sealed class NullableUtcDateTimeValueConverter : ValueConverter<DateTime?, DateTime?>
+    {
+        public NullableUtcDateTimeValueConverter()
+            : base(
+                v => v.HasValue ? ToUtc(v.Value) : v,
+                v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v)
+        {
+        }
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeValueConverter>();
+        configurationBuilder.Properties<DateTime?>().HaveConversion<NullableUtcDateTimeValueConverter>();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
