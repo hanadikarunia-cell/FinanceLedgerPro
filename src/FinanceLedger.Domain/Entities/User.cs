@@ -3,9 +3,12 @@ using FinanceLedger.Domain.Enums;
 
 namespace FinanceLedger.Domain.Entities;
 
-public class User : IEntity
+public class User : ITenantEntity
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    /// <summary>The site this user belongs to. Empty for an AppAdmin, who belongs to no site.</summary>
+    public string TenantId { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string DisplayName { get; set; } = string.Empty;
     public UserRole Role { get; set; } = UserRole.User;

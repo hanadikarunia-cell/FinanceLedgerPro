@@ -38,10 +38,14 @@ import ReceiptIcon from '@mui/icons-material/Receipt';
 import PaymentsIcon from '@mui/icons-material/Payments';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import NewReleasesIcon from '@mui/icons-material/NewReleases';
+import DomainIcon from '@mui/icons-material/Domain';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 
 import { useAuth } from '@/context/AuthContext';
 import { useColorMode } from '@/context/ThemeContext';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
+import ActingAsBanner from '@/components/ActingAsBanner';
+import ViewAsDialog from '@/components/ViewAsDialog';
 import type { UserRole } from '@/types';
 import { APP_VERSION } from '@/utils/version';
 
@@ -54,12 +58,16 @@ interface NavItem {
   roles?: UserRole[];
 }
 
+// The Application Admin belongs to no site, so the site-level screens are not for them.
+const SITE_ROLES: UserRole[] = ['Manager', 'User'];
+
 const NAV_ITEMS: NavItem[] = [
-  { labelKey: 'nav.dashboard', to: '/', icon: <DashboardIcon /> },
-  { labelKey: 'nav.transactions', to: '/transactions', icon: <ReceiptLongIcon /> },
-  { labelKey: 'pettyCash.title', to: '/petty-cash-requests', icon: <PaidIcon /> },
-  { labelKey: 'nav.reports', to: '/reports', icon: <AssessmentIcon /> },
-  { labelKey: 'nav.cars', to: '/cars', icon: <DirectionsCarIcon /> },
+  { labelKey: 'nav.sites', to: '/sites', icon: <DomainIcon />, roles: ['AppAdmin'] },
+  { labelKey: 'nav.dashboard', to: '/', icon: <DashboardIcon />, roles: SITE_ROLES },
+  { labelKey: 'nav.transactions', to: '/transactions', icon: <ReceiptLongIcon />, roles: SITE_ROLES },
+  { labelKey: 'pettyCash.title', to: '/petty-cash-requests', icon: <PaidIcon />, roles: SITE_ROLES },
+  { labelKey: 'nav.reports', to: '/reports', icon: <AssessmentIcon />, roles: SITE_ROLES },
+  { labelKey: 'nav.cars', to: '/cars', icon: <DirectionsCarIcon />, roles: SITE_ROLES },
   { labelKey: 'invoices.title', to: '/invoices', icon: <ReceiptIcon />, roles: ['Manager'] },
   { labelKey: 'accountsPayable.title', to: '/accounts-payable', icon: <PaymentsIcon />, roles: ['Manager'] },
   { labelKey: 'nav.users', to: '/users', icon: <PeopleIcon />, roles: ['Manager'] },
@@ -75,12 +83,13 @@ export default function Layout({ children }: { children: ReactNode }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { mode, toggleColorMode } = useColorMode();
-  const { user, logout } = useAuth();
+  const { user, logout, canViewAs, actingAs } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [viewAsOpen, setViewAsOpen] = useState(false);
 
   const visibleItems = NAV_ITEMS.filter(
     (item) => !item.roles || (user && item.roles.includes(user.role)),
@@ -189,10 +198,28 @@ export default function Layout({ children }: { children: ReactNode }) {
             <Box sx={{ px: 2, py: 1 }}>
               <Typography variant="subtitle2">{user?.displayName}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {user?.email} · {user?.role}
+                {user?.email} · {user ? t(`enums.role.${user.role}`) : ''}
               </Typography>
+              {user?.tenantName && (
+                <Typography variant="caption" color="text.secondary" display="block">
+                  {user.tenantName}
+                </Typography>
+              )}
             </Box>
             <Divider />
+            {canViewAs && !actingAs && (
+              <MenuItem
+                onClick={() => {
+                  setAnchorEl(null);
+                  setViewAsOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <VisibilityIcon fontSize="small" />
+                </ListItemIcon>
+                {t('viewAs.menu')}
+              </MenuItem>
+            )}
             <MenuItem
               component={RouterLink}
               to="/settings"
@@ -256,8 +283,11 @@ export default function Layout({ children }: { children: ReactNode }) {
         }}
       >
         <Toolbar />
+        <ActingAsBanner />
         {children}
       </Box>
+
+      <ViewAsDialog open={viewAsOpen} onClose={() => setViewAsOpen(false)} />
     </Box>
   );
 }

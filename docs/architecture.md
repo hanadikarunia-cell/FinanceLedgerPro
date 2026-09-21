@@ -21,7 +21,7 @@ The platform is built on **free-tier PaaS** (Render + Supabase + Vercel) and fol
 | Capability | Description |
 |------------|-------------|
 | Transaction lifecycle | Draft → Submitted → Approved / Rejected with full audit trail |
-| Role-based access | `Manager` (full access) and `User` (limited) |
+| Role-based access | `AppAdmin` (all sites), `Manager` / Site Admin (one site) and `User` (limited) |
 | Reporting | Daily, monthly, yearly aggregations + dashboard KPIs |
 | Exports | Excel (ClosedXML), PDF (QuestPDF), CSV |
 | Attachments | Receipts/documents stored in Supabase Storage |
@@ -421,8 +421,10 @@ above. See `supabase/migrations/0001_init.sql` for exact columns and indexes
 
 ## 7. RBAC Matrix
 
-Two roles: **Manager** (full access) and **User** (limited). Users operate within their own
-branch and on their own transactions; Managers operate across branches.
+Three roles: **Application Admin** (all sites, see §7a), **Manager** (called *Site Admin* in the UI;
+full access within one site) and **User** (limited). The matrix below is per site; users operate
+within their own branch and on their own transactions, Managers operate across the branches of
+their site.
 
 | Action | Manager | User |
 |--------|:-------:|:----:|
@@ -456,6 +458,57 @@ branch and on their own transactions; Managers operate across branches.
 > Enforcement occurs at **two layers**: ASP.NET Core `[Authorize(Roles=...)]` +
 > policy-based authorization handlers (for resource-ownership checks such as "own branch /
 > own transaction"), and again inside Application-layer use-cases as a defense-in-depth check.
+
+---
+
+## 7a. Multi-Tenancy (Sites)
+
+One portal, several clients. Each client is a **site** (a row in `tenants`); every business
+row carries a `tenant_id`, and a signed-in person only ever sees the rows of their own site.
+The site comes from the person's account — it is never chosen by the client and is not part
+of the token.
+
+**Roles**
+
+| Role | Scope | Can |
+|------|-------|-----|
+| `AppAdmin` (Application Admin) | All sites; belongs to none | Create/deactivate sites and their first Site Admin, list a site's people, "View as" anyone, publish What's New, triage all Feedback |
+| `Manager` (Site Admin) | One site | Everything the Manager could do before, inside their own site; "View as" a regular user of their site |
+| `User` | One site, own branches | Unchanged |
+
+**Isolation layers**
+
+1. **Request identity** (`UserContextMiddleware`): after the JWT is validated, the effective
+   user is loaded from the database. Role, site and branches are the stored values, so a
+   deactivated user, a deactivated site or a changed role takes effect immediately.
+2. **Application layer**: `LedgerDbContext` has a global query filter on every tenant-scoped
+   entity (`ITenantEntity`: transactions, users, branches, cars, invoices, petty-cash
+   requests, attachments, audit logs). It reads the current site from `ITenantProvider`
+   on every query, and no site means no rows (fails closed). New rows are stamped with the
+   current site on save, and an existing row's site can never be changed through EF.
+   Cross-site lookups (login, the middleware, site management) are explicit
+   `*AnyTenant` repository methods that call `IgnoreQueryFilters()` — greppable.
+3. **Database**: `tenant_id` is NOT NULL on every business table, branch codes are unique per
+   site, and emails stay globally unique (they are the login).
+
+Not tenant-scoped on purpose: `feedback` and `release_notes` (they belong to the application
+owner, across all sites) and `tenants` itself.
+
+**View as (act as a user)**
+
+An admin picks a specific person from a list and uses the app as them. The client sends
+`X-Act-As-User: <userId>` on every request; the server re-checks it each time:
+
+- Application Admin → anyone except another Application Admin, in any site.
+- Site Admin → regular users of their own site only.
+- **Read-only by default.** Any non-read request is rejected with 403 unless the client also
+  sends `X-Act-As-Write: true` (the "Allow changes" toggle). Exports and `/auth/*` are allowed.
+- While acting, the request runs with the acted-as user's site, role and branches (so all
+  existing checks apply to them), `created_by` is the acted-as user, and audit entries read
+  `<user> (by <admin>)`. Changing a password is refused while acting.
+- `GET /auth/me` returns the effective user plus `actingAs` (the real admin, and whether
+  changes are allowed). The web app shows a permanent banner while acting; the acting state
+  lives in `sessionStorage`, so it ends when the tab closes.
 
 ---
 

@@ -19,8 +19,9 @@ public class FeedbackService : IFeedbackService
 
     public async Task<PagedResult<FeedbackDto>> QueryAsync(FeedbackQuery query, CancellationToken ct = default)
     {
-        // Managers triage everyone's feedback; a regular User only sees their own submissions.
-        var restrictUserId = _currentUser.IsManager ? null : _currentUser.UserId;
+        // Feedback goes to the application owner, across all sites: only the Application
+        // Admin sees and triages everyone's; everyone else sees their own submissions.
+        var restrictUserId = _currentUser.IsAppAdmin ? null : _currentUser.UserId;
 
         var page = await _repo.QueryAsync(query, restrictUserId, ct);
         return new PagedResult<FeedbackDto>(
@@ -46,8 +47,8 @@ public class FeedbackService : IFeedbackService
 
     public async Task<FeedbackDto> SetSeverityAsync(string id, FeedbackSeverity severity, CancellationToken ct = default)
     {
-        if (!_currentUser.IsManager)
-            throw new ForbiddenException("Only Managers can triage feedback.");
+        if (!_currentUser.IsAppAdmin)
+            throw new ForbiddenException("Only the Application Admin can triage feedback.");
 
         var entity = await _repo.GetByIdAsync(id, ct)
             ?? throw new NotFoundException(nameof(Feedback), id);

@@ -2,9 +2,10 @@ using FinanceLedger.Domain.Common;
 
 namespace FinanceLedger.Domain.Entities;
 
-public class Attachment : IEntity
+public class Attachment : ITenantEntity
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string TenantId { get; set; } = string.Empty;
     public string TransactionId { get; set; } = string.Empty;
     public string FileName { get; set; } = string.Empty;
     public string ContentType { get; set; } = string.Empty;

@@ -3,9 +3,10 @@ using FinanceLedger.Domain.Enums;
 
 namespace FinanceLedger.Domain.Entities;
 
-public class Invoice : IEntity
+public class Invoice : ITenantEntity
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string TenantId { get; set; } = string.Empty;
     public InvoiceType Type { get; set; }
     public string Branch { get; set; } = string.Empty;
     public string ClientName { get; set; } = string.Empty;

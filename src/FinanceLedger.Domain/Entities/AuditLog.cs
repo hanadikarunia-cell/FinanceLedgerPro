@@ -3,9 +3,12 @@ using FinanceLedger.Domain.Enums;
 
 namespace FinanceLedger.Domain.Entities;
 
-public class AuditLog : IEntity
+public class AuditLog : ITenantEntity
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    /// <summary>Empty for application-level actions that happen outside any site.</summary>
+    public string TenantId { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
     public AuditAction Action { get; set; }

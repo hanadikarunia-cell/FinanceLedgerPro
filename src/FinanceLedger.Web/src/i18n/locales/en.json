@@ -11,8 +11,9 @@
       "Expense": "Expense"
     },
     "role": {
-      "Manager": "Manager",
-      "User": "User"
+      "Manager": "Site Admin",
+      "User": "User",
+      "AppAdmin": "Application Admin"
     },
     "category": {
       "Sales": "Sales",
@@ -78,7 +79,8 @@
     "appName": "Finance Ledger Pro",
     "brandShort": "Ledger Pro",
     "version": "Finance Ledger Pro v{{version}}",
-    "feedback": "Feedback"
+    "feedback": "Feedback",
+    "sites": "Sites"
   },
   "layout": {
     "account": "Account",
@@ -383,5 +385,46 @@
       "Minor": "Minor",
       "Patch": "Patch"
     }
+  },
+  "viewAs": {
+    "title": "View as user",
+    "menu": "View as user...",
+    "introAppAdmin": "Choose a site, then the person you want to see the app as. You will see exactly what they see.",
+    "introSiteAdmin": "Choose a user of your site to see the app as they see it. Their data and permissions apply.",
+    "site": "Site",
+    "user": "User",
+    "noUsers": "No users to show",
+    "allowChanges": "Allow changes",
+    "allowChangesOff": "Read-only: you can look around, but nothing can be created, edited or deleted.",
+    "allowChangesOn": "Changes you make will be saved as this user. The audit log records that you did it.",
+    "start": "View as this user",
+    "exit": "Exit",
+    "bannerReadOnly": "Viewing as {{name}} (read-only). Signed in as {{admin}}.",
+    "bannerWrite": "Viewing as {{name}} - changes are saved as this user. Signed in as {{admin}}.",
+    "confirmWriteTitle": "Allow changes?",
+    "confirmWriteMessage": "Anything you create, edit or approve will be saved as {{name}}. The audit log will show it was done by you on their behalf.",
+    "failed": "Could not switch to that user."
+  },
+  "sites": {
+    "title": "Sites",
+    "subtitle": "Each site is a separate client with its own data. Users only ever see their own site.",
+    "newSite": "New site",
+    "siteName": "Site name",
+    "code": "Code",
+    "users": "Users",
+    "active": "Active",
+    "inactive": "Inactive",
+    "created": "Created",
+    "edit": "Edit site",
+    "firstAdmin": "First Site Admin",
+    "adminName": "Admin name",
+    "nameRequired": "Site name is required",
+    "codeRequired": "Site code is required",
+    "codeInvalid": "Use letters, digits, - or _ only",
+    "adminNameRequired": "Admin name is required",
+    "adminEmailInvalid": "Enter a valid email address",
+    "adminPasswordShort": "Password must be at least 8 characters",
+    "inactiveHint": "People in an inactive site cannot sign in.",
+    "failedToLoad": "Failed to load sites"
   }
 }

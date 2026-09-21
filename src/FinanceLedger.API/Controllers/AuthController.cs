@@ -42,6 +42,13 @@ public class AuthController : ControllerBase
         return NoContent();
     }
 
+    /// <summary>The effective identity for this request — the acted-as user while an admin is using "View as".</summary>
+    [HttpGet("me")]
+    [Authorize]
+    [ProducesResponseType(typeof(MeResponse), StatusCodes.Status200OK)]
+    public async Task<ActionResult<MeResponse>> Me(CancellationToken ct)
+        => Ok(await _loginService.GetMeAsync(ct));
+
     [HttpPost("reset-password")]
     [Authorize]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

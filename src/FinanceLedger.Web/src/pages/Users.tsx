@@ -101,7 +101,7 @@ export default function Users() {
     reset({
       email: editing?.email ?? '',
       displayName: editing?.displayName ?? '',
-      role: editing?.role ?? 'User',
+      role: editing?.role === 'Manager' ? 'Manager' : 'User',
       assignedBranches: editing?.assignedBranches ?? [],
       password: '',
       isEditing: !!editing,

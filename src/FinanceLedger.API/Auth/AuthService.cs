@@ -2,6 +2,7 @@ using FinanceLedger.Application.Common;
 using FinanceLedger.Application.DTOs;
 using FinanceLedger.Application.Interfaces;
 using FinanceLedger.Domain.Entities;
+using FinanceLedger.Domain.Enums;
 using Microsoft.AspNetCore.Authentication;
 
 namespace FinanceLedger.API.Auth;
@@ -12,6 +13,7 @@ public interface ILoginService
     Task<LoginResponse> RefreshAsync(RefreshRequest request, CancellationToken ct = default);
     Task LogoutAsync(LogoutRequest request, CancellationToken ct = default);
     Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default);
+    Task<MeResponse> GetMeAsync(CancellationToken ct = default);
 }
 
 /// <summary>
@@ -24,17 +26,20 @@ public interface ILoginService
 public class AuthService : ILoginService
 {
     private readonly IUserRepository _userRepository;
+    private readonly ITenantRepository _tenantRepository;
     private readonly IIdentityProviderService _identityProvider;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ICurrentUserService _currentUser;
 
     public AuthService(
         IUserRepository userRepository,
+        ITenantRepository tenantRepository,
         IIdentityProviderService identityProvider,
         IHttpContextAccessor httpContextAccessor,
         ICurrentUserService currentUser)
     {
         _userRepository = userRepository;
+        _tenantRepository = tenantRepository;
         _identityProvider = identityProvider;
         _httpContextAccessor = httpContextAccessor;
         _currentUser = currentUser;
@@ -52,13 +57,15 @@ public class AuthService : ILoginService
             throw new ForbiddenException("Invalid credentials.");
         }
 
-        var user = await _userRepository.GetByIdAsync(grant.UserId, ct);
-        if (user is null || !user.IsActive)
+        // The caller has no site yet (that is what login establishes), so look across sites.
+        var user = await _userRepository.GetByIdAnyTenantAsync(grant.UserId, ct);
+        var tenant = user is null ? null : await GetActiveTenantAsync(user, ct);
+        if (user is null || !user.IsActive || (user.Role != UserRole.AppAdmin && tenant is null))
         {
             throw new ForbiddenException("Invalid credentials.");
         }
 
-        return ToLoginResponse(grant, user);
+        return ToLoginResponse(grant, user, tenant);
     }
 
     public async Task<LoginResponse> RefreshAsync(RefreshRequest request, CancellationToken ct = default)
@@ -73,13 +80,14 @@ public class AuthService : ILoginService
             throw new ForbiddenException("Invalid or expired refresh token.");
         }
 
-        var user = await _userRepository.GetByIdAsync(grant.UserId, ct);
-        if (user is null || !user.IsActive)
+        var user = await _userRepository.GetByIdAnyTenantAsync(grant.UserId, ct);
+        var tenant = user is null ? null : await GetActiveTenantAsync(user, ct);
+        if (user is null || !user.IsActive || (user.Role != UserRole.AppAdmin && tenant is null))
         {
             throw new ForbiddenException("Invalid or expired refresh token.");
         }
 
-        return ToLoginResponse(grant, user);
+        return ToLoginResponse(grant, user, tenant);
     }
 
     public async Task LogoutAsync(LogoutRequest request, CancellationToken ct = default)
@@ -103,12 +111,17 @@ public class AuthService : ILoginService
     /// </summary>
     public async Task ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default)
     {
+        if (_currentUser.IsActingAs)
+        {
+            throw new ForbiddenException("Exit \"View as\" before changing a password.");
+        }
+
         if (!string.Equals(request.Email, _currentUser.Email, StringComparison.OrdinalIgnoreCase))
         {
             throw new ForbiddenException("You can only reset your own password.");
         }
 
-        var user = await _userRepository.GetByEmailAsync(request.Email, ct);
+        var user = await _userRepository.GetByEmailAnyTenantAsync(request.Email, ct);
         if (user is null || !user.IsActive)
         {
             throw new NotFoundException("User", request.Email);
@@ -142,21 +155,50 @@ public class AuthService : ILoginService
         await _identityProvider.AdminUpdateUserAsync(user.Id, password: request.NewPassword, ct: ct);
     }
 
-    private static LoginResponse ToLoginResponse(AuthGrantResult grant, User user) => new()
+    public async Task<MeResponse> GetMeAsync(CancellationToken ct = default)
+    {
+        var user = await _userRepository.GetByIdAnyTenantAsync(_currentUser.UserId ?? string.Empty, ct)
+            ?? throw new NotFoundException(nameof(User), _currentUser.UserId ?? string.Empty);
+        var tenant = await GetActiveTenantAsync(user, ct);
+
+        return new MeResponse
+        {
+            User = ToUserDto(user, tenant),
+            ActingAs = _currentUser.IsActingAs
+                ? new ActingAsDto
+                {
+                    RealUserId = _currentUser.ActingAdminId ?? string.Empty,
+                    RealUserName = _currentUser.ActingAdminName ?? string.Empty,
+                    CanWrite = _currentUser.ActingCanWrite
+                }
+                : null
+        };
+    }
+
+    private async Task<Tenant?> GetActiveTenantAsync(User user, CancellationToken ct)
+    {
+        if (user.Role == UserRole.AppAdmin || string.IsNullOrEmpty(user.TenantId))
+        {
+            return null;
+        }
+
+        var tenant = await _tenantRepository.GetByIdAsync(user.TenantId, ct);
+        return tenant is { IsActive: true } ? tenant : null;
+    }
+
+    private static UserDto ToUserDto(User user, Tenant? tenant)
+    {
+        var dto = user.ToDto();
+        dto.TenantName = tenant?.Name;
+        return dto;
+    }
+
+    private static LoginResponse ToLoginResponse(AuthGrantResult grant, User user, Tenant? tenant) => new()
     {
         AccessToken = grant.AccessToken,
         RefreshToken = grant.RefreshToken,
         ExpiresAt = grant.ExpiresAt,
         TokenType = "Bearer",
-        User = new UserDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            DisplayName = user.DisplayName,
-            Role = user.Role,
-            AssignedBranches = user.AssignedBranches,
-            IsActive = user.IsActive,
-            CreatedDate = user.CreatedDate
-        }
+        User = ToUserDto(user, tenant)
     };
 }

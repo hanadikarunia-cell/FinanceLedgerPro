@@ -11,8 +11,9 @@
       "Expense": "Pengeluaran"
     },
     "role": {
-      "Manager": "Manajer",
-      "User": "Pengguna"
+      "Manager": "Admin Situs",
+      "User": "Pengguna",
+      "AppAdmin": "Admin Aplikasi"
     },
     "category": {
       "Sales": "Penjualan",
@@ -78,7 +79,8 @@
     "appName": "Finance Ledger Pro",
     "brandShort": "Ledger Pro",
     "version": "Finance Ledger Pro v{{version}}",
-    "feedback": "Masukan"
+    "feedback": "Masukan",
+    "sites": "Situs"
   },
   "layout": {
     "account": "Akun",
@@ -381,5 +383,46 @@
       "Minor": "Minor",
       "Patch": "Patch"
     }
+  },
+  "viewAs": {
+    "title": "Lihat sebagai pengguna",
+    "menu": "Lihat sebagai pengguna...",
+    "introAppAdmin": "Pilih situs, lalu orang yang ingin Anda lihat tampilannya. Anda akan melihat persis seperti yang mereka lihat.",
+    "introSiteAdmin": "Pilih pengguna di situs Anda untuk melihat aplikasi seperti yang mereka lihat. Data dan izin mereka berlaku.",
+    "site": "Situs",
+    "user": "Pengguna",
+    "noUsers": "Tidak ada pengguna",
+    "allowChanges": "Izinkan perubahan",
+    "allowChangesOff": "Hanya baca: Anda bisa melihat-lihat, tetapi tidak bisa membuat, mengubah, atau menghapus apa pun.",
+    "allowChangesOn": "Perubahan yang Anda buat akan disimpan atas nama pengguna ini. Log audit mencatat bahwa Anda yang melakukannya.",
+    "start": "Lihat sebagai pengguna ini",
+    "exit": "Keluar",
+    "bannerReadOnly": "Melihat sebagai {{name}} (hanya baca). Masuk sebagai {{admin}}.",
+    "bannerWrite": "Melihat sebagai {{name}} - perubahan disimpan atas nama pengguna ini. Masuk sebagai {{admin}}.",
+    "confirmWriteTitle": "Izinkan perubahan?",
+    "confirmWriteMessage": "Apa pun yang Anda buat, ubah, atau setujui akan disimpan atas nama {{name}}. Log audit akan menunjukkan bahwa Anda yang melakukannya atas nama mereka.",
+    "failed": "Tidak dapat beralih ke pengguna tersebut."
+  },
+  "sites": {
+    "title": "Situs",
+    "subtitle": "Setiap situs adalah klien terpisah dengan datanya sendiri. Pengguna hanya melihat situs mereka sendiri.",
+    "newSite": "Situs baru",
+    "siteName": "Nama situs",
+    "code": "Kode",
+    "users": "Pengguna",
+    "active": "Aktif",
+    "inactive": "Nonaktif",
+    "created": "Dibuat",
+    "edit": "Ubah situs",
+    "firstAdmin": "Admin Situs pertama",
+    "adminName": "Nama admin",
+    "nameRequired": "Nama situs wajib diisi",
+    "codeRequired": "Kode situs wajib diisi",
+    "codeInvalid": "Gunakan huruf, angka, - atau _ saja",
+    "adminNameRequired": "Nama admin wajib diisi",
+    "adminEmailInvalid": "Masukkan alamat email yang valid",
+    "adminPasswordShort": "Kata sandi minimal 8 karakter",
+    "inactiveHint": "Orang di situs yang nonaktif tidak dapat masuk.",
+    "failedToLoad": "Gagal memuat situs"
   }
 }

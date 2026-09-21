@@ -36,7 +36,10 @@ public class UserService : IUserService
     {
         EnsureManager();
 
-        var existing = await _repo.GetByEmailAsync(dto.Email, ct);
+        EnsureAssignableRole(dto.Role);
+
+        // Emails are unique across all sites (they are the login), so check every site.
+        var existing = await _repo.GetByEmailAnyTenantAsync(dto.Email, ct);
         if (existing is not null)
             throw new ConflictException($"A user with email '{dto.Email}' already exists.");
 
@@ -46,6 +49,7 @@ public class UserService : IUserService
         var user = new User
         {
             Id = identityUserId,
+            TenantId = _currentUser.TenantId ?? string.Empty,
             Email = dto.Email,
             DisplayName = dto.DisplayName,
             Role = dto.Role,
@@ -62,6 +66,8 @@ public class UserService : IUserService
     public async Task<UserDto> UpdateAsync(string id, UpdateUserDto dto, CancellationToken ct = default)
     {
         EnsureManager();
+
+        EnsureAssignableRole(dto.Role);
 
         var user = await _repo.GetByIdAsync(id, ct)
             ?? throw new NotFoundException(nameof(User), id);
@@ -95,6 +101,14 @@ public class UserService : IUserService
     private void EnsureManager()
     {
         if (!_currentUser.IsManager)
-            throw new ForbiddenException("Only Managers can manage users.");
+            throw new ForbiddenException("Only Site Admins can manage users.");
+    }
+
+    // The Application Admin is not a per-site role: it is created only by the seeder
+    // (and by hand), never through the site's user management.
+    private static void EnsureAssignableRole(UserRole role)
+    {
+        if (role == UserRole.AppAdmin)
+            throw new ForbiddenException("The Application Admin role cannot be assigned here.");
     }
 }

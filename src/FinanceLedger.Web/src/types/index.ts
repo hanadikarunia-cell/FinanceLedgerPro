@@ -1,4 +1,5 @@
-export type UserRole = 'Manager' | 'User';
+/** AppAdmin = Application Admin (all sites); Manager = Site Admin (one site); User. */
+export type UserRole = 'AppAdmin' | 'Manager' | 'User';
 
 export type TransactionType = 'Income' | 'Expense';
 
@@ -11,6 +12,43 @@ export interface User {
   role: UserRole;
   assignedBranches: string[];
   isActive?: boolean;
+  tenantId?: string;
+  tenantName?: string;
+}
+
+/** A client site (tenant). */
+export interface Site {
+  id: string;
+  name: string;
+  code: string;
+  isActive: boolean;
+  createdDate: string;
+  userCount: number;
+}
+
+export interface CreateSiteInput {
+  name: string;
+  code: string;
+  adminEmail: string;
+  adminDisplayName: string;
+  adminPassword: string;
+}
+
+export interface UpdateSiteInput {
+  name: string;
+  isActive: boolean;
+}
+
+/** Present while an admin is using "View as". */
+export interface ActingAs {
+  realUserId: string;
+  realUserName: string;
+  canWrite: boolean;
+}
+
+export interface MeResponse {
+  user: User;
+  actingAs?: ActingAs;
 }
 
 export interface UserLookup {

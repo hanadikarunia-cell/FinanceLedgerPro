@@ -19,7 +19,9 @@ public class RepositoryBase<T> : IRepository<T> where T : class, IEntity
 
     public virtual async Task<T?> GetByIdAsync(string id, string partitionKey, CancellationToken ct = default)
     {
-        return await Set.FindAsync(new object?[] { id }, ct).AsTask();
+        // FirstOrDefaultAsync (not FindAsync): Find returns tracked entities from the identity
+        // map without consulting the site query filter.
+        return await Set.FirstOrDefaultAsync(e => e.Id == id, ct);
     }
 
     public virtual async Task<IReadOnlyList<T>> ListAsync(CancellationToken ct = default)

@@ -45,7 +45,8 @@ const TYPE_COLOR: Record<ReleaseType, 'error' | 'info' | 'default'> = {
 
 export default function WhatsNew() {
   const { t } = useTranslation();
-  const { isManager } = useAuth();
+  // Only the Application Admin publishes the changelog; everyone reads it.
+  const { isAppAdmin: isManager } = useAuth();
 
   const { data: notes = [], isLoading, isError, error } = useReleaseNotes();
   const createMut = useCreateReleaseNote();

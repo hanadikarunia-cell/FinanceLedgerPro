@@ -34,7 +34,18 @@ public static class Mapping
         Role = u.Role,
         AssignedBranches = u.AssignedBranches,
         IsActive = u.IsActive,
-        CreatedDate = u.CreatedDate
+        CreatedDate = u.CreatedDate,
+        TenantId = u.TenantId
+    };
+
+    public static TenantDto ToDto(this Tenant t, int userCount = 0) => new()
+    {
+        Id = t.Id,
+        Name = t.Name,
+        Code = t.Code,
+        IsActive = t.IsActive,
+        CreatedDate = t.CreatedDate,
+        UserCount = userCount
     };
 
     public static BranchDto ToDto(this Branch b) => new()

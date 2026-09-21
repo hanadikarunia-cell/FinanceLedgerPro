@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<ISyncService, SyncService>();
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<IReleaseNoteService, ReleaseNoteService>();
+        services.AddScoped<ITenantService, TenantService>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 

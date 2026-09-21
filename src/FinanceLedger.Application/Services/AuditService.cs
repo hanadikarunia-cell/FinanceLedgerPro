@@ -28,7 +28,10 @@ public class AuditService : IAuditService
         var log = new AuditLog
         {
             UserId = _currentUser.UserId ?? "system",
-            UserName = _currentUser.UserName ?? "system",
+            // While an admin acts as someone, the entry is attributed to the acted-as user
+            // (whose data it is) but names the real admin so the trail stays honest.
+            UserName = (_currentUser.UserName ?? "system")
+                + (_currentUser.IsActingAs ? $" (by {_currentUser.ActingAdminName ?? "admin"})" : string.Empty),
             Action = action,
             Entity = entity,
             EntityId = entityId,

@@ -4,7 +4,16 @@ using FinanceLedger.Domain.Enums;
 
 namespace FinanceLedger.API.Services;
 
-public class CurrentUserService : ICurrentUserService
+/// <summary>Claim names the user-context middleware puts on the effective principal.</summary>
+public static class TenantClaims
+{
+    public const string TenantId = "tenant_id";
+    public const string ActingAdminId = "act_as_by";
+    public const string ActingAdminName = "act_as_by_name";
+    public const string ActingCanWrite = "act_as_write";
+}
+
+public class CurrentUserService : ICurrentUserService, ITenantProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
@@ -43,7 +52,21 @@ public class CurrentUserService : ICurrentUserService
 
     public bool IsManager => Role == UserRole.Manager;
 
+    public bool IsAppAdmin => Role == UserRole.AppAdmin;
+
     public bool IsAuthenticated => Principal?.Identity?.IsAuthenticated ?? false;
+
+    // Only the user-context middleware sets this claim (from the database, never from
+    // the token), so a client cannot choose its own site.
+    public string? TenantId => FirstClaim(TenantClaims.TenantId);
+
+    public bool IsActingAs => !string.IsNullOrWhiteSpace(ActingAdminId);
+
+    public string? ActingAdminId => FirstClaim(TenantClaims.ActingAdminId);
+
+    public string? ActingAdminName => FirstClaim(TenantClaims.ActingAdminName);
+
+    public bool ActingCanWrite => FirstClaim(TenantClaims.ActingCanWrite) == "true";
 
     private string? FirstClaim(params string[] claimTypes)
     {

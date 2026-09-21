@@ -11,6 +11,12 @@ public class UserDto
     public string[] AssignedBranches { get; set; } = Array.Empty<string>();
     public bool IsActive { get; set; }
     public DateTime CreatedDate { get; set; }
+
+    /// <summary>The user's site; empty for an AppAdmin.</summary>
+    public string TenantId { get; set; } = string.Empty;
+
+    /// <summary>The site's display name, filled in where it's cheap to look up (sign-in, /auth/me).</summary>
+    public string? TenantName { get; set; }
 }
 
 public class CreateUserDto

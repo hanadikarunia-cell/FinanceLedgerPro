@@ -146,6 +146,7 @@ builder.Services.AddTransient<IClaimsTransformation, SupabaseClaimsTransformatio
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Manager"));
+    options.AddPolicy("AppAdminOnly", policy => policy.RequireRole("AppAdmin"));
     options.AddPolicy("UserOrManager", policy => policy.RequireRole("User", "Manager"));
     options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
@@ -158,6 +159,7 @@ builder.Services.AddInfrastructure(configuration);
 
 // ---- API-layer services ----
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<ITenantProvider>(sp => (ITenantProvider)sp.GetRequiredService<ICurrentUserService>());
 builder.Services.AddScoped<ILoginService, AuthService>();
 
 // ---- CORS ----
@@ -234,6 +236,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors(CorsPolicyName);
 app.UseRateLimiter();
 app.UseAuthentication();
+app.UseMiddleware<UserContextMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();

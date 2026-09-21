@@ -18,7 +18,15 @@ import AuditLogs from '@/pages/AuditLogs';
 import Settings from '@/pages/Settings';
 import FeedbackPage from '@/pages/Feedback';
 import WhatsNew from '@/pages/WhatsNew';
+import Sites from '@/pages/Sites';
 import NotFound from '@/pages/NotFound';
+import { useAuth } from '@/context/AuthContext';
+
+/** The Application Admin has no site data to show, so their home is the Sites list. */
+function Home() {
+  const { isAppAdmin } = useAuth();
+  return isAppAdmin ? <Navigate to="/sites" replace /> : <Dashboard />;
+}
 
 export default function AppRoutes() {
   return (
@@ -30,39 +38,7 @@ export default function AppRoutes() {
           path="/"
           element={
             <Layout>
-              <Dashboard />
-            </Layout>
-          }
-        />
-        <Route
-          path="/transactions"
-          element={
-            <Layout>
-              <Transactions />
-            </Layout>
-          }
-        />
-        <Route
-          path="/petty-cash-requests"
-          element={
-            <Layout>
-              <PettyCashRequests />
-            </Layout>
-          }
-        />
-        <Route
-          path="/reports"
-          element={
-            <Layout>
-              <Reports />
-            </Layout>
-          }
-        />
-        <Route
-          path="/cars"
-          element={
-            <Layout>
-              <Cars />
+              <Home />
             </Layout>
           }
         />
@@ -91,7 +67,55 @@ export default function AppRoutes() {
           }
         />
 
-        {/* Manager-only routes */}
+        {/* Application Admin only: client sites */}
+        <Route element={<RoleGuard allow={['AppAdmin']} />}>
+          <Route
+            path="/sites"
+            element={
+              <Layout>
+                <Sites />
+              </Layout>
+            }
+          />
+        </Route>
+
+        {/* Site-level screens (Site Admin and User). The Application Admin has no site. */}
+        <Route element={<RoleGuard allow={['Manager', 'User']} />}>
+          <Route
+            path="/transactions"
+            element={
+              <Layout>
+                <Transactions />
+              </Layout>
+            }
+          />
+          <Route
+            path="/petty-cash-requests"
+            element={
+              <Layout>
+                <PettyCashRequests />
+              </Layout>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <Layout>
+                <Reports />
+              </Layout>
+            }
+          />
+          <Route
+            path="/cars"
+            element={
+              <Layout>
+                <Cars />
+              </Layout>
+            }
+          />
+        </Route>
+
+        {/* Site Admin only routes */}
         <Route element={<RoleGuard allow={['Manager']} />}>
           <Route
             path="/users"

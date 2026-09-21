@@ -28,7 +28,9 @@ import { formatDateTime, getErrorMessage } from '@/utils/format';
 export default function FeedbackPage() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const isManager = user?.role === 'Manager';
+  // Feedback goes to the application owner: only the Application Admin sees everyone's
+  // and triages it (everyone else sees their own submissions).
+  const isManager = user?.role === 'AppAdmin';
 
   const { data: items = [], isLoading, isError, error } = useFeedbackList();
   const createMut = useCreateFeedback();

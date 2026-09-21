@@ -69,7 +69,7 @@ public class ReleaseNoteService : IReleaseNoteService
 
     private void EnsureManager()
     {
-        if (!_currentUser.IsManager)
-            throw new ForbiddenException("Only Managers can publish What's New updates.");
+        if (!_currentUser.IsAppAdmin)
+            throw new ForbiddenException("Only the Application Admin can publish What's New updates.");
     }
 }

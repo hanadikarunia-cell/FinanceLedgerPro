@@ -3,9 +3,10 @@ using FinanceLedger.Domain.Enums;
 
 namespace FinanceLedger.Domain.Entities;
 
-public class Transaction : IEntity
+public class Transaction : ITenantEntity
 {
     public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string TenantId { get; set; } = string.Empty;
     public TransactionType Type { get; set; }
     public string Category { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;

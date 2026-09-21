@@ -87,6 +87,15 @@ public interface IFeedbackService
     Task<FeedbackDto> SetSeverityAsync(string id, FeedbackSeverity severity, CancellationToken ct = default);
 }
 
+/// <summary>Application Admin only: manage the client sites (tenants) and see who is in them.</summary>
+public interface ITenantService
+{
+    Task<IReadOnlyList<TenantDto>> GetAllAsync(CancellationToken ct = default);
+    Task<TenantDto> CreateAsync(CreateTenantDto dto, CancellationToken ct = default);
+    Task<TenantDto> UpdateAsync(string id, UpdateTenantDto dto, CancellationToken ct = default);
+    Task<IReadOnlyList<UserDto>> GetUsersAsync(string tenantId, CancellationToken ct = default);
+}
+
 /// <summary>The app's own "What's New" changelog — admin-authored, as opposed to
 /// user-submitted Feedback. Any authenticated user can read it; only a Manager can
 /// publish, edit, or delete entries.</summary>

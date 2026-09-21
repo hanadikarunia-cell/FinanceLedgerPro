@@ -1,3 +1,5 @@
+using FinanceLedger.Application.Interfaces;
+using FinanceLedger.Domain.Common;
 using FinanceLedger.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -8,10 +10,22 @@ namespace FinanceLedger.Infrastructure.Persistence;
 
 public class LedgerDbContext : DbContext
 {
-    public LedgerDbContext(DbContextOptions<LedgerDbContext> options) : base(options)
+    private readonly ITenantProvider _tenantProvider;
+
+    public LedgerDbContext(DbContextOptions<LedgerDbContext> options, ITenantProvider tenantProvider) : base(options)
     {
+        _tenantProvider = tenantProvider;
     }
 
+    /// <summary>
+    /// The site this context is confined to. The global query filters below reference
+    /// this property (not a captured value), so EF re-reads it for every query - a
+    /// context therefore can never read another site's rows, even by accident. Null
+    /// matches nothing (the column is NOT NULL), i.e. it fails closed.
+    /// </summary>
+    private string? CurrentTenantId => _tenantProvider.TenantId;
+
+    public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -68,8 +82,21 @@ public class LedgerDbContext : DbContext
         // Schema/indexes are owned by supabase/migrations/*.sql — this mapping targets
         // the tables that SQL creates. UseXminAsConcurrencyToken relies on Postgres's
         // built-in per-row xmin system column, so no explicit version column is needed.
+        modelBuilder.Entity<Tenant>(builder =>
+        {
+            builder.ToTable("tenants");
+            builder.HasKey(t => t.Id);
+            builder.Property(t => t.Id).HasColumnName("id");
+            builder.Property(t => t.Name).HasColumnName("name");
+            builder.Property(t => t.Code).HasColumnName("code");
+            builder.Property(t => t.IsActive).HasColumnName("is_active");
+            builder.Property(t => t.CreatedDate).HasColumnName("created_date");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
         modelBuilder.Entity<User>(builder =>
         {
+            ConfigureTenant(builder);
             builder.ToTable("users");
             builder.HasKey(u => u.Id);
             builder.Property(u => u.Id).HasColumnName("id");
@@ -85,6 +112,7 @@ public class LedgerDbContext : DbContext
 
         modelBuilder.Entity<Transaction>(builder =>
         {
+            ConfigureTenant(builder);
             builder.ToTable("transactions");
             builder.HasKey(t => t.Id);
             builder.Property(t => t.Id).HasColumnName("id");
@@ -108,6 +136,7 @@ public class LedgerDbContext : DbContext
 
         modelBuilder.Entity<AuditLog>(builder =>
         {
+            ConfigureTenant(builder);
             builder.ToTable("audit_logs");
             builder.HasKey(a => a.Id);
             builder.Property(a => a.Id).HasColumnName("id");
@@ -124,6 +153,7 @@ public class LedgerDbContext : DbContext
 
         modelBuilder.Entity<Branch>(builder =>
         {
+            ConfigureTenant(builder);
             builder.ToTable("branches");
             builder.HasKey(b => b.Id);
             builder.Property(b => b.Id).HasColumnName("id");
@@ -136,6 +166,7 @@ public class LedgerDbContext : DbContext
 
         modelBuilder.Entity<Attachment>(builder =>
         {
+            ConfigureTenant(builder);
             builder.ToTable("attachments");
             builder.HasKey(a => a.Id);
             builder.Property(a => a.Id).HasColumnName("id");
@@ -150,6 +181,7 @@ public class LedgerDbContext : DbContext
 
         modelBuilder.Entity<PettyCashRequest>(builder =>
         {
+            ConfigureTenant(builder);
             builder.ToTable("petty_cash_requests");
             builder.HasKey(p => p.Id);
             builder.Property(p => p.Id).HasColumnName("id");
@@ -168,6 +200,7 @@ public class LedgerDbContext : DbContext
 
         modelBuilder.Entity<Car>(builder =>
         {
+            ConfigureTenant(builder);
             builder.ToTable("cars");
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Id).HasColumnName("id");
@@ -189,6 +222,7 @@ public class LedgerDbContext : DbContext
 
         modelBuilder.Entity<Invoice>(builder =>
         {
+            ConfigureTenant(builder);
             builder.ToTable("invoices");
             builder.HasKey(i => i.Id);
             builder.Property(i => i.Id).HasColumnName("id");
@@ -244,6 +278,65 @@ public class LedgerDbContext : DbContext
             builder.Property(r => r.PublishedDate).HasColumnName("published_date");
             ConfigureXminConcurrencyToken(builder);
         });
+    }
+
+    /// <summary>
+    /// Maps the tenant_id column and installs the site filter. Every tenant-scoped
+    /// entity goes through here so none can be forgotten; bypassing it requires an
+    /// explicit IgnoreQueryFilters() at the call site (see the *AnyTenant repository
+    /// methods), which is greppable.
+    /// </summary>
+    private void ConfigureTenant<TEntity>(EntityTypeBuilder<TEntity> builder)
+        where TEntity : class, ITenantEntity
+    {
+        builder.Property(e => e.TenantId).HasColumnName("tenant_id");
+        builder.HasQueryFilter(e => e.TenantId == CurrentTenantId);
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        ApplyTenancy();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        ApplyTenancy();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    /// <summary>
+    /// New rows are stamped with the current site unless the caller named one explicitly
+    /// (site creation and seeding do). An existing row's site can never be changed
+    /// through EF. Rows without any site are only legitimate for the Application
+    /// Admin's own user and for app-level audit entries.
+    /// </summary>
+    private void ApplyTenancy()
+    {
+        var current = CurrentTenantId;
+        foreach (var entry in ChangeTracker.Entries<ITenantEntity>())
+        {
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    if (string.IsNullOrEmpty(entry.Entity.TenantId))
+                    {
+                        if (!string.IsNullOrEmpty(current))
+                        {
+                            entry.Entity.TenantId = current;
+                        }
+                        else if (entry.Entity is not User and not AuditLog)
+                        {
+                            throw new InvalidOperationException(
+                                $"Cannot save a {entry.Entity.GetType().Name} without a site (tenant).");
+                        }
+                    }
+                    break;
+                case EntityState.Modified:
+                    entry.Property(e => e.TenantId).IsModified = false;
+                    break;
+            }
+        }
     }
 
     /// <summary>

@@ -21,7 +21,7 @@ public class FeedbackController : ControllerBase
         _service = service;
     }
 
-    /// <summary>Manager sees all feedback; a regular User sees only their own submissions.</summary>
+    /// <summary>The Application Admin sees all feedback; everyone else sees only their own submissions.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(PagedResult<FeedbackDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResult<FeedbackDto>>> Query(
@@ -42,7 +42,7 @@ public class FeedbackController : ControllerBase
     }
 
     [HttpPut("{id}/severity")]
-    [Authorize(Policy = "ManagerOnly")]
+    [Authorize(Policy = "AppAdminOnly")]
     [ProducesResponseType(typeof(FeedbackDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<FeedbackDto>> SetSeverity(string id, [FromBody] SetFeedbackSeverityDto dto, CancellationToken ct)
         => Ok(await _service.SetSeverityAsync(id, dto.Severity, ct));

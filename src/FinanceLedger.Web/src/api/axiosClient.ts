@@ -19,6 +19,13 @@ axiosClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // "View as": the server re-checks that this admin may act as this user, and treats the
+  // session as read-only unless the write header is set.
+  const actAs = tokenStore.getActAs();
+  if (actAs) {
+    config.headers['X-Act-As-User'] = actAs.user.id;
+    config.headers['X-Act-As-Write'] = actAs.canWrite ? 'true' : 'false';
+  }
   return config;
 });
 

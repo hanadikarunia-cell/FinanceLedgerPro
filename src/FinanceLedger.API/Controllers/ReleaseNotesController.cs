@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace FinanceLedger.API.Controllers;
 
 /// <summary>The app's "What's New" changelog. Any authenticated user can read it;
-/// publishing/editing/deleting entries is Manager-only.</summary>
+/// publishing/editing/deleting entries is Application-Admin-only.</summary>
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/release-notes")]
@@ -28,7 +28,7 @@ public class ReleaseNotesController : ControllerBase
         => Ok(await _service.GetAllAsync(ct));
 
     [HttpPost]
-    [Authorize(Policy = "ManagerOnly")]
+    [Authorize(Policy = "AppAdminOnly")]
     [ProducesResponseType(typeof(ReleaseNoteDto), StatusCodes.Status201Created)]
     public async Task<ActionResult<ReleaseNoteDto>> Create([FromBody] CreateReleaseNoteDto dto, CancellationToken ct)
     {
@@ -37,13 +37,13 @@ public class ReleaseNotesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Policy = "ManagerOnly")]
+    [Authorize(Policy = "AppAdminOnly")]
     [ProducesResponseType(typeof(ReleaseNoteDto), StatusCodes.Status200OK)]
     public async Task<ActionResult<ReleaseNoteDto>> Update(string id, [FromBody] UpdateReleaseNoteDto dto, CancellationToken ct)
         => Ok(await _service.UpdateAsync(id, dto, ct));
 
     [HttpDelete("{id}")]
-    [Authorize(Policy = "ManagerOnly")]
+    [Authorize(Policy = "AppAdminOnly")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
     {

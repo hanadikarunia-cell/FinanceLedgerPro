@@ -14,7 +14,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // The Worker runs outside any HTTP request, so it supplies a system principal
 // for the Application services that depend on ICurrentUserService.
-builder.Services.AddSingleton<ICurrentUserService, SystemCurrentUserService>();
+builder.Services.AddSingleton<SystemCurrentUserService>();
+builder.Services.AddSingleton<ICurrentUserService>(sp => sp.GetRequiredService<SystemCurrentUserService>());
+builder.Services.AddSingleton<ITenantProvider>(sp => sp.GetRequiredService<SystemCurrentUserService>());
 
 // Shared manual-trigger signal (producer: admin endpoint/handler, consumer: worker).
 builder.Services.AddSingleton<ManualSyncTrigger>();

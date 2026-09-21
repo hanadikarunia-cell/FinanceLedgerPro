@@ -55,8 +55,21 @@ caller's own branch / own resources.
 
 | Value | Meaning |
 |-------|---------|
-| `Manager` | Full access; can approve/reject; cross-branch |
+| `AppAdmin` | Application Admin: manages sites (`/sites`), What's New and all Feedback; belongs to no site, so site-level endpoints return no data |
+| `Manager` | Site Admin: full access within their own site; can approve/reject; cross-branch |
 | `User` | Limited; own branch / own transactions |
+
+### 1.2a Sites and "View as"
+
+Every request is scoped to the caller's **site** (tenant), taken from their account — there is no
+site parameter and one site can never read another's data.
+
+An admin can act as another user by adding request headers:
+
+| Header | Meaning |
+|--------|---------|
+| `X-Act-As-User: <userId>` | Run this request as that user (their site, role and branches apply). Application Admin: any user except another Application Admin. Site Admin: regular users of their own site. Otherwise `403`. |
+| `X-Act-As-Write: true` | Allow changes. Without it, everything except `GET`/`HEAD`/`OPTIONS`, exports and `/auth/*` is rejected with `403` (read-only). |
 
 ### 1.3 Paged Result Shape
 
@@ -204,6 +217,23 @@ Response `202 Accepted` (always, to avoid account enumeration):
 ```json
 { "message": "If an account exists for this email, a reset link has been sent." }
 ```
+
+---
+
+### 2.5 Me
+
+`GET /api/v1/auth/me` · **Auth:** any signed-in user
+
+The effective identity for this request — the acted-as user while "View as" headers are sent.
+
+```json
+{
+  "user": { "id": "…", "email": "…", "displayName": "…", "role": "User", "tenantId": "…", "tenantName": "Client 2", "assignedBranches": ["…"], "isActive": true },
+  "actingAs": { "realUserId": "…", "realUserName": "Application Admin", "canWrite": false }
+}
+```
+
+`actingAs` is omitted when not acting.
 
 ---
 
@@ -777,6 +807,33 @@ Versioning headers on responses:
 api-supported-versions: 1.0
 api-deprecated-versions:
 ```
+
+---
+
+## 13. Sites
+
+Application Admin only (`403` for everyone else).
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/v1/sites` | List sites with their user counts |
+| `POST` | `/api/v1/sites` | Create a site **and its first Site Admin** (Supabase Auth user + local user + a "Main" branch) |
+| `PUT` | `/api/v1/sites/{id}` | Rename / activate / deactivate. People in an inactive site cannot sign in |
+| `GET` | `/api/v1/sites/{id}/users` | The people in a site (to choose someone to "View as") |
+
+`POST /sites` body:
+
+```json
+{
+  "name": "Client 2",
+  "code": "CLIENT2",
+  "adminEmail": "admin@client2.example",
+  "adminDisplayName": "Client 2 Admin",
+  "adminPassword": "at-least-8-chars"
+}
+```
+
+`409` if the site code or the admin email already exists.
 
 ---
 
