@@ -22,7 +22,10 @@ public static class DependencyInjection
         services.Configure<GoogleSheetsOptions>(configuration.GetSection("GoogleSheets"));
 
         var postgresConnectionString = configuration.GetConnectionString("Postgres") ?? string.Empty;
-        services.AddDbContext<LedgerDbContext>(options => options.UseNpgsql(postgresConnectionString));
+        services.AddScoped<TenantSessionInterceptor>();
+        services.AddDbContext<LedgerDbContext>((sp, options) => options
+            .UseNpgsql(postgresConnectionString)
+            .AddInterceptors(sp.GetRequiredService<TenantSessionInterceptor>()));
 
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();

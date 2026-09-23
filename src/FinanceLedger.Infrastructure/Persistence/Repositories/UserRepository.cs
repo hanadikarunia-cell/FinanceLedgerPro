@@ -1,3 +1,4 @@
+using FinanceLedger.Application.Common;
 using FinanceLedger.Application.Interfaces;
 using FinanceLedger.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -32,17 +33,20 @@ public class UserRepository : RepositoryBase<User>, IUserRepository
 
     public async Task<User?> GetByEmailAnyTenantAsync(string email, CancellationToken ct = default)
     {
+        using var _ = TenantBypassContext.Begin();
         var normalized = email.ToLower();
         return await Set.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Email.ToLower() == normalized, ct);
     }
 
     public async Task<User?> GetByIdAnyTenantAsync(string id, CancellationToken ct = default)
     {
+        using var _ = TenantBypassContext.Begin();
         return await Set.IgnoreQueryFilters().FirstOrDefaultAsync(u => u.Id == id, ct);
     }
 
     public async Task<IReadOnlyList<User>> GetByTenantAnyTenantAsync(string tenantId, CancellationToken ct = default)
     {
+        using var _ = TenantBypassContext.Begin();
         return await Set.IgnoreQueryFilters()
             .Where(u => u.TenantId == tenantId)
             .OrderBy(u => u.DisplayName)
@@ -51,6 +55,7 @@ public class UserRepository : RepositoryBase<User>, IUserRepository
 
     public async Task<int> CountByTenantAnyTenantAsync(string tenantId, CancellationToken ct = default)
     {
+        using var _ = TenantBypassContext.Begin();
         return await Set.IgnoreQueryFilters().CountAsync(u => u.TenantId == tenantId, ct);
     }
 }

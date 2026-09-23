@@ -1,3 +1,4 @@
+using FinanceLedger.Application.Common;
 using FinanceLedger.Application.Interfaces;
 using FinanceLedger.Domain.Entities;
 using FinanceLedger.Domain.Enums;
@@ -39,6 +40,10 @@ public static class DbInitializer
             // Migration 0004 seeds the tenants; without it the schema is out of date.
             return;
         }
+
+        // Startup seeding runs with no request and so no ambient site; every row it writes
+        // names its site explicitly, which needs a bypass scope once RLS is switched on.
+        using var _ = TenantBypassContext.Begin();
 
         var branches = await SeedBranchesAsync(context, ct);
         await SeedAdminsAsync(context, identityProvider, branches, ct);

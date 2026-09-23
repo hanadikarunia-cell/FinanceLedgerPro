@@ -64,18 +64,25 @@ public class TenantService : ITenantService
             dto.AdminEmail, dto.AdminPassword, UserRole.Manager, new[] { branch.Id }, ct);
 
         await _tenants.AddAsync(tenant, ct);
-        await _branches.AddAsync(branch, ct);
-        await _users.AddAsync(new User
+
+        // The caller (Application Admin) has no site of their own, so the new site's
+        // branch and first user - which belong to a site other than the caller's ambient
+        // one - need an explicit bypass once RLS is switched on.
+        using (TenantBypassContext.Begin())
         {
-            Id = identityUserId,
-            TenantId = tenant.Id,
-            Email = dto.AdminEmail,
-            DisplayName = dto.AdminDisplayName,
-            Role = UserRole.Manager,
-            AssignedBranches = new[] { branch.Id },
-            IsActive = true,
-            CreatedDate = DateTime.UtcNow
-        }, ct);
+            await _branches.AddAsync(branch, ct);
+            await _users.AddAsync(new User
+            {
+                Id = identityUserId,
+                TenantId = tenant.Id,
+                Email = dto.AdminEmail,
+                DisplayName = dto.AdminDisplayName,
+                Role = UserRole.Manager,
+                AssignedBranches = new[] { branch.Id },
+                IsActive = true,
+                CreatedDate = DateTime.UtcNow
+            }, ct);
+        }
 
         return tenant.ToDto(1);
     }
