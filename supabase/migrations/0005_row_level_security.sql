@@ -6,10 +6,15 @@
 -- see docs/architecture.md §7a "Row-level security"). Reverting that one env var instantly
 -- rolls this back with no further migration needed.
 
+-- A role for the API/Worker with no special privileges (not superuser, not BYPASSRLS).
+-- Created with no password on purpose - a role with no password cannot authenticate at
+-- all, so this migration is safe to commit to a public repo. Set its real password out
+-- of band (`alter role app_api with password '...';`, run once, value never committed)
+-- before pointing ConnectionStrings__Postgres at it.
 do $$
 begin
   if not exists (select from pg_roles where rolname = 'app_api') then
-    create role app_api with login password 'Cc5BLAcgOiYfXmx45RVZRk7tvySjyXSu';
+    create role app_api with login;
   end if;
 end$$;
 
