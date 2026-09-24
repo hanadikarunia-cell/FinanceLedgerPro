@@ -491,6 +491,21 @@ of the token.
 3. **Database**: `tenant_id` is NOT NULL on every business table, branch codes are unique per
    site, and emails stay globally unique (they are the login).
 
+**Hardening (migrations 0006 and 0007).** The Client 1 default on every `tenant_id` column is removed, so a
+code path that forgets to name a site fails instead of silently writing into Client 1. The
+`tenants` table has RLS too: a site session can read only its own row and never write; site
+lookups and management go through `TenantRepository`, which runs in an explicit bypass scope.
+`audit_logs` gains `actor_user_id` (the real signed-in person), `acting_as_user_id` and
+`impersonation_session_id` (set only while viewing as someone), `metadata`, and a wider set of
+event types. A new `impersonation_sessions` table (admin, target, target site, start, expiry,
+end, IP, user agent) is the server-side record View as will be built on; it is only reachable
+through the bypass-scoped repository.
+
+**Tests.** `src/FinanceLedger.Tests` starts an embedded PostgreSQL, applies the real migrations
+and checks isolation as the restricted `app_api` role (SELECT/INSERT/UPDATE/DELETE across sites
+for every tenant table, the tenants and sessions tables, the connection interceptor, the bypass
+scope, tenant stamping and audit). Run with `dotnet test src/FinanceLedger.Tests`.
+
 Not tenant-scoped on purpose: `feedback` and `release_notes` (they belong to the application
 owner, across all sites) and `tenants` itself.
 

@@ -13,9 +13,7 @@ public static class DbInitializer
     public const string Client2TenantId = "00000000-0000-0000-0000-000000000002";
 
     private const string AppAdminEmail = "admin@financeledger.local";
-    private const string AppAdminPassword = "Admin@123";
     private const string Client1AdminEmail = "client1.admin@financeledger.local";
-    private const string Client1AdminPassword = "Admin@123";
 
     /// <summary>
     /// Seeds baseline reference data on an empty database: the Client 1 branches, its Site
@@ -25,9 +23,16 @@ public static class DbInitializer
     /// The context has no site here (no request), so every query steps outside the
     /// site filter explicitly and every row names its site.
     /// </summary>
+    /// <param name="appAdminPassword">Initial password for the Application Admin. There is no
+    /// default: on a database that still needs the admin accounts, a missing value makes this
+    /// throw (startup logs the error and carries on), so a public repo can never carry a
+    /// working default login.</param>
+    /// <param name="client1AdminPassword">Initial password for the Client 1 Site Admin, same rule.</param>
     public static async Task EnsureSeedDataAsync(
         LedgerDbContext context,
         IIdentityProviderService identityProvider,
+        string? appAdminPassword,
+        string? client1AdminPassword,
         CancellationToken ct = default)
     {
         if (!await context.Database.CanConnectAsync(ct))
@@ -35,18 +40,19 @@ public static class DbInitializer
             return;
         }
 
+        // Startup seeding runs with no request and so no ambient site; every row it writes
+        // names its site explicitly, and it reads the tenants table, so it needs a bypass
+        // scope once RLS is switched on.
+        using var _ = TenantBypassContext.Begin();
+
         if (!await context.Tenants.AnyAsync(t => t.Id == Client1TenantId, ct))
         {
             // Migration 0004 seeds the tenants; without it the schema is out of date.
             return;
         }
 
-        // Startup seeding runs with no request and so no ambient site; every row it writes
-        // names its site explicitly, which needs a bypass scope once RLS is switched on.
-        using var _ = TenantBypassContext.Begin();
-
         var branches = await SeedBranchesAsync(context, ct);
-        await SeedAdminsAsync(context, identityProvider, branches, ct);
+        await SeedAdminsAsync(context, identityProvider, branches, appAdminPassword, client1AdminPassword, ct);
     }
 
     private static async Task<IReadOnlyList<Branch>> SeedBranchesAsync(LedgerDbContext context, CancellationToken ct)
@@ -99,6 +105,8 @@ public static class DbInitializer
         LedgerDbContext context,
         IIdentityProviderService identityProvider,
         IReadOnlyList<Branch> branches,
+        string? appAdminPassword,
+        string? client1AdminPassword,
         CancellationToken ct)
     {
         var users = await context.Users.IgnoreQueryFilters().ToListAsync(ct);
@@ -109,12 +117,16 @@ public static class DbInitializer
         if (Has(AppAdminEmail))
             return;
 
+        if (string.IsNullOrWhiteSpace(appAdminPassword) || string.IsNullOrWhiteSpace(client1AdminPassword))
+            throw new InvalidOperationException(
+                "Seed:AppAdminPassword and Seed:Client1AdminPassword must be set to create the initial admin accounts.");
+
         var branchIds = branches.Select(b => b.Id).ToArray();
 
         // Both must exist in Supabase Auth to actually log in; the local rows mirror the
         // domain fields Supabase doesn't know about (display name, site, etc.).
         var siteAdminId = await identityProvider.AdminCreateUserAsync(
-            Client1AdminEmail, Client1AdminPassword, UserRole.Manager, branchIds, ct);
+            Client1AdminEmail, client1AdminPassword, UserRole.Manager, branchIds, ct);
         await context.Users.AddAsync(new User
         {
             Id = siteAdminId,
@@ -128,7 +140,7 @@ public static class DbInitializer
         }, ct);
 
         var appAdminId = await identityProvider.AdminCreateUserAsync(
-            AppAdminEmail, AppAdminPassword, UserRole.AppAdmin, Array.Empty<string>(), ct);
+            AppAdminEmail, appAdminPassword, UserRole.AppAdmin, Array.Empty<string>(), ct);
         await context.Users.AddAsync(new User
         {
             Id = appAdminId,

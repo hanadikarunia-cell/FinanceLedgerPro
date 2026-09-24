@@ -5,9 +5,11 @@ name: Sync approved transactions to Google Sheets
 # endpoint on an interval instead of paying for a separate service that would run
 # the exact same logic continuously. As a side effect, this also periodically wakes
 # the free API from Render's inactivity spin-down.
+#
+# DISABLED (no schedule): the sync pushes to one global spreadsheet, so with several sites it
+# could send one site's data into another site's sheet. Re-enable only together with a
+# per-site spreadsheet setting. It can still be run by hand from the Actions tab.
 on:
-  schedule:
-    - cron: "*/15 * * * *"
   workflow_dispatch: {}
 
 jobs:

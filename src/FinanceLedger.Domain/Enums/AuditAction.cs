@@ -7,5 +7,17 @@ public enum AuditAction
     Delete,
     Approve,
     Reject,
-    Void
+    Void,
+
+    // Security and administration events (recorded from Phase 2 onward).
+    Login,
+    Logout,
+    PasswordReset,
+    RoleChange,
+    Deactivate,
+    TenantCreate,
+    TenantUpdate,
+    ImpersonationStart,
+    ImpersonationEnd,
+    Export
 }

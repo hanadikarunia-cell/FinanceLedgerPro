@@ -1,0 +1,22 @@
+name: Tests
+
+# Runs the backend tests on every push and pull request. The database tests start their own
+# embedded PostgreSQL (downloaded on first run), apply the real supabase/migrations/*.sql and
+# exercise site isolation as the restricted app_api role - no external database is used.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Test
+        run: dotnet test src/FinanceLedger.Tests/FinanceLedger.Tests.csproj --nologo

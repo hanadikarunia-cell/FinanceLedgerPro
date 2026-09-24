@@ -256,7 +256,12 @@ using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<LedgerDbContext>();
         var identityProvider = scope.ServiceProvider.GetRequiredService<IIdentityProviderService>();
-        await DbInitializer.EnsureSeedDataAsync(dbContext, identityProvider, CancellationToken.None);
+        await DbInitializer.EnsureSeedDataAsync(
+            dbContext,
+            identityProvider,
+            configuration["Seed:AppAdminPassword"],
+            configuration["Seed:Client1AdminPassword"],
+            CancellationToken.None);
     }
     catch (Exception ex)
     {

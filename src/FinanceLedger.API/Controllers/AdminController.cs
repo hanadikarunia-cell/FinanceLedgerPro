@@ -15,21 +15,35 @@ namespace FinanceLedger.API.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/admin")]
-[Authorize(Policy = "ManagerOnly")]
+[Authorize(Policy = "AppAdminOnly")]
 [Produces("application/json")]
 public class AdminController : ControllerBase
 {
     private readonly ISyncService _syncService;
+    private readonly IConfiguration _configuration;
 
-    public AdminController(ISyncService syncService)
+    public AdminController(ISyncService syncService, IConfiguration configuration)
     {
         _syncService = syncService;
+        _configuration = configuration;
     }
 
     [HttpPost("sync/google-sheets")]
     [ProducesResponseType(typeof(SyncResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<SyncResultDto>> SyncGoogleSheets(CancellationToken ct)
     {
+        // Off unless explicitly enabled: the target spreadsheet is a single global setting, so
+        // syncing while several sites exist could copy one site's transactions into another
+        // site's sheet. (It also only ever sees the caller's own site, which is none for the
+        // Application Admin.) Turn on only once a per-site spreadsheet setting exists.
+        if (!_configuration.GetValue<bool>("Sync:Enabled"))
+        {
+            return Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                title: "Google Sheets sync is disabled.");
+        }
+
         var synced = await _syncService.SyncApprovedTransactionsAsync(ct);
         return Ok(new SyncResultDto(synced));
     }

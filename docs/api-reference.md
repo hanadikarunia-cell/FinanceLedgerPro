@@ -841,7 +841,7 @@ Application Admin only (`403` for everyone else).
 
 ### 12.1 Trigger Google Sheets Sync
 
-`POST /api/v1/admin/sync/google-sheets` · **Auth:** Manager only
+`POST /api/v1/admin/sync/google-sheets` · **Auth:** Application Admin only · **Disabled by default:** answers `404` unless `Sync__Enabled=true` (the target spreadsheet is a single global setting, so it must not run while several sites exist).
 
 Runs one Google Sheets sync cycle synchronously and returns how many transactions
 were pushed. Added for the free-tier deployment, where a scheduled GitHub Actions

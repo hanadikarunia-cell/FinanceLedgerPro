@@ -41,3 +41,11 @@ services:
         value: Transactions
       - key: GoogleSheets__CredentialsJson
         sync: false
+      # First-run admin accounts. No defaults: leave these set only for a brand-new database
+      # (they are ignored once the Application Admin exists).
+      - key: Seed__AppAdminPassword
+        sync: false
+      - key: Seed__Client1AdminPassword
+        sync: false
+      - key: Sync__Enabled
+        value: "false"

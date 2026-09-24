@@ -26,6 +26,7 @@ public class LedgerDbContext : DbContext
     private string? CurrentTenantId => _tenantProvider.TenantId;
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
@@ -94,6 +95,22 @@ public class LedgerDbContext : DbContext
             ConfigureXminConcurrencyToken(builder);
         });
 
+        modelBuilder.Entity<ImpersonationSession>(builder =>
+        {
+            builder.ToTable("impersonation_sessions");
+            builder.HasKey(s => s.Id);
+            builder.Property(s => s.Id).HasColumnName("id");
+            builder.Property(s => s.AdminUserId).HasColumnName("admin_user_id");
+            builder.Property(s => s.TargetUserId).HasColumnName("target_user_id");
+            builder.Property(s => s.TargetTenantId).HasColumnName("target_tenant_id");
+            builder.Property(s => s.StartedAt).HasColumnName("started_at");
+            builder.Property(s => s.ExpiresAt).HasColumnName("expires_at");
+            builder.Property(s => s.EndedAt).HasColumnName("ended_at");
+            builder.Property(s => s.IpAddress).HasColumnName("ip_address");
+            builder.Property(s => s.UserAgent).HasColumnName("user_agent");
+            ConfigureXminConcurrencyToken(builder);
+        });
+
         modelBuilder.Entity<User>(builder =>
         {
             ConfigureTenant(builder);
@@ -148,6 +165,10 @@ public class LedgerDbContext : DbContext
             builder.Property(a => a.OldValue).HasColumnName("old_value");
             builder.Property(a => a.NewValue).HasColumnName("new_value");
             builder.Property(a => a.Timestamp).HasColumnName("timestamp");
+            builder.Property(a => a.ActorUserId).HasColumnName("actor_user_id");
+            builder.Property(a => a.ActingAsUserId).HasColumnName("acting_as_user_id");
+            builder.Property(a => a.ImpersonationSessionId).HasColumnName("impersonation_session_id");
+            builder.Property(a => a.Metadata).HasColumnName("metadata");
             // Append-only — no updates, so no concurrency token needed.
         });
 

@@ -96,6 +96,12 @@ Vercel URL, and redeploy the API so the browser can call it.
 
 ## 7. Schedule the Google Sheets sync (optional, skip if not using Sheets)
 
+> **Currently disabled.** The sync writes to one global spreadsheet, so with more than one
+> site it could copy one site's data into another site's sheet. The schedule is removed from
+> the workflow and the endpoint answers 404 unless `Sync__Enabled=true`. Do not re-enable it
+> until a per-site spreadsheet setting exists. The steps below describe the original,
+> single-site design.
+
 Since there's no separate worker process, a scheduled GitHub Actions workflow
 (`.github/workflows/sync-google-sheets.yml`, already in this repo, runs every 15
 minutes for free) logs in as a Manager and calls the sync endpoint.
@@ -108,16 +114,16 @@ minutes for free) logs in as a Manager and calls the sync endpoint.
    - `SYNC_API_BASE_URL` = `https://<api-service>.onrender.com`
    - `SYNC_USER_EMAIL` = that dedicated user's email
    - `SYNC_USER_PASSWORD` = that dedicated user's password
-3. The workflow now runs automatically every 15 minutes. Trigger it once manually
+3. (Original design: the workflow ran every 15 minutes.) Trigger it once manually
    (Actions tab → "Sync approved transactions to Google Sheets" → Run workflow) to
    confirm it succeeds.
 
 ## 8. Verify end-to-end
 
-1. Log in at the Vercel URL with the seeded manager account
-   (`admin@financeledger.local` / `Admin@123` — **change this password immediately**
-   via Settings, since the seed step provisions it in Supabase Auth on first API
-   startup).
+1. Log in at the Vercel URL as the Application Admin (`admin@financeledger.local`)
+   with the password you set in the `Seed__AppAdminPassword` Render env var. There is
+   no built-in default password: if that variable is empty on a brand-new database the
+   admin accounts are not created. Change the password from Settings after first login.
 2. Create a transaction, upload an attachment, confirm it downloads.
 3. Approve the transaction; run the sync workflow (or wait for its next scheduled
    run) and confirm the row appears in the configured Google Sheet.

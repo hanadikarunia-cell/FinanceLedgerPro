@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ITenantRepository, TenantRepository>();
+        services.AddScoped<IImpersonationSessionRepository, ImpersonationSessionRepository>();
         services.AddScoped<IBranchRepository, BranchRepository>();
         services.AddScoped<IAuditRepository, AuditRepository>();
         services.AddScoped<IAttachmentRepository, AttachmentRepository>();

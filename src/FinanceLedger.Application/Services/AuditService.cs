@@ -28,6 +28,9 @@ public class AuditService : IAuditService
         var log = new AuditLog
         {
             UserId = _currentUser.UserId ?? "system",
+            // The real, signed-in person, even while they are viewing as someone else.
+            ActorUserId = _currentUser.ActingAdminId ?? _currentUser.UserId,
+            ActingAsUserId = _currentUser.IsActingAs ? _currentUser.UserId : null,
             // While an admin acts as someone, the entry is attributed to the acted-as user
             // (whose data it is) but names the real admin so the trail stays honest.
             UserName = (_currentUser.UserName ?? "system")
